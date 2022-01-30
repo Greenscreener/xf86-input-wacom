@@ -63,8 +63,10 @@ enum WacomAxisType {
 	WACOM_AXIS_WHEEL	= (1 << 9),
 	WACOM_AXIS_RING		= (1 << 10),
 	WACOM_AXIS_RING2	= (1 << 11),
+	WACOM_AXIS_SCROLL_X	= (1 << 12),
+	WACOM_AXIS_SCROLL_Y	= (1 << 13),
 
-	_WACOM_AXIS_LAST = WACOM_AXIS_RING2,
+	_WACOM_AXIS_LAST = WACOM_AXIS_SCROLL_Y,
 };
 
 typedef struct {

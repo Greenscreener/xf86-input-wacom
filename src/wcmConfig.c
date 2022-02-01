@@ -951,7 +951,13 @@ static int wcmInitAxes(WacomDevicePtr priv)
 		wcmInitAxis(priv, WACOM_AXIS_STRIP_Y, min, max, res);
 	}
 
-	/* sixth valuator: airbrush: abs-wheel, artpen: rotation, pad:abs-wheel */
+	/* sixth valuator: scroll_x */
+	wcmInitAxis(priv, WACOM_AXIS_SCROLL_X, 0, 0, 0);
+
+	/* seventh valuator: scroll_y */
+	wcmInitAxis(priv, WACOM_AXIS_SCROLL_Y, 0, 0, 0);
+
+	/* eigth valuator: airbrush: abs-wheel, artpen: rotation, pad:abs-wheel */
 	res = 0;
 	if (IsStylus(priv))
 	{
@@ -967,7 +973,7 @@ static int wcmInitAxes(WacomDevicePtr priv)
 		wcmInitAxis(priv, WACOM_AXIS_RING, min, max, res);
 	}
 
-	/* seventh valuator: abswheel2 */
+	/* ninth valuator: abswheel2 */
 	if ((TabletHasFeature(common, WCM_DUALRING)) && IsPad(priv))
 	{
 		res = 0;
@@ -975,12 +981,6 @@ static int wcmInitAxes(WacomDevicePtr priv)
 		max = common->wcmMaxRing;
 		wcmInitAxis(priv, WACOM_AXIS_RING2, min, max, res);
 	}
-
-	/* eighth valuator: scroll_x */
-	wcmInitAxis(priv, WACOM_AXIS_SCROLL_X, 0, 0, 0);
-
-	/* ninth valuator: scroll_y */
-	wcmInitAxis(priv, WACOM_AXIS_SCROLL_Y, 0, 0, 0);
 
 	return TRUE;
 }

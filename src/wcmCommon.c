@@ -135,7 +135,9 @@ static void wcmPanscroll(WacomDevicePtr priv, const WacomDeviceState *ds, int x,
 		delta_x = (x - priv->oldState.x);
 		delta_y = (y - priv->oldState.y);
 	}
+	
 
+	/* 
 	accumulated_x = &priv->wcmPanscrollState.x;
 	accumulated_y = &priv->wcmPanscrollState.y;
 	*accumulated_x += delta_x;
@@ -145,6 +147,14 @@ static void wcmPanscroll(WacomDevicePtr priv, const WacomDeviceState *ds, int x,
 
 	*accumulated_x = wcmButtonPerNotch(priv, *accumulated_x, threshold, 6, 7);
 	*accumulated_y = wcmButtonPerNotch(priv, *accumulated_y, threshold, 4, 5);
+	*/
+
+	DBG(0, priv, "Emitting motion x=%d y=%d\n", delta_x, delta_y);
+
+	WacomAxisData axes;
+	wcmAxisSet(&axes, WACOM_AXIS_SCROLL_X, delta_x);
+	wcmAxisSet(&axes, WACOM_AXIS_SCROLL_Y, delta_y);
+	wcmEmitMotion(priv, TRUE, &axes);
 }
 
 void wcmResetButtonAction(WacomDevicePtr priv, int button)

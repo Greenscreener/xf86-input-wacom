@@ -78,7 +78,7 @@ WacomDevicePtr wcmAllocate(void *frontend, const char *name)
 	priv->strip_default[STRIP_LEFT_DN] = 5;
 	priv->strip_default[STRIP_RIGHT_UP] = 4;
 	priv->strip_default[STRIP_RIGHT_DN] = 5;
-	priv->naxes = 6;			/* Default number of axes */
+	priv->naxes = 8;			/* Default number of axes */
 
 	common->wcmDevices = priv;
 
@@ -976,6 +976,12 @@ static int wcmInitAxes(WacomDevicePtr priv)
 		wcmInitAxis(priv, WACOM_AXIS_RING2, min, max, res);
 	}
 
+	/* eighth valuator: scroll_x */
+	wcmInitAxis(priv, WACOM_AXIS_SCROLL_X, 0, 0, 0);
+
+	/* ninth valuator: scroll_y */
+	wcmInitAxis(priv, WACOM_AXIS_SCROLL_Y, 0, 0, 0);
+
 	return TRUE;
 }
 
@@ -988,9 +994,9 @@ Bool wcmDevInit(WacomDevicePtr priv)
 	if (priv->common->wcmModel->DetectConfig)
 		priv->common->wcmModel->DetectConfig (priv);
 
-	nbaxes = priv->naxes;       /* X, Y, Pressure, Tilt-X, Tilt-Y, Wheel */
-	if (!nbaxes || nbaxes > 7)
-		nbaxes = priv->naxes = 7;
+	nbaxes = priv->naxes;       /* X, Y, Pressure, Tilt-X, Tilt-Y, Wheel, Scroll-X, Scroll-Y */
+	if (!nbaxes || nbaxes > 9)
+		nbaxes = priv->naxes = 9;
 	nbbuttons = priv->nbuttons; /* Use actual number of buttons, if possible */
 
 	if (IsPad(priv) && TabletHasFeature(priv->common, WCM_DUALRING))

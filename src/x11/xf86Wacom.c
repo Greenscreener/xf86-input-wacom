@@ -374,12 +374,12 @@ void wcmEmitKeycode(WacomDevicePtr priv, int keycode, int state)
 }
 
 static inline void
-convertAxes(const WacomAxisData *axes, int *first_out, int *num_out, int valuators[7])
+convertAxes(const WacomAxisData *axes, int *first_out, int *num_out, int valuators[9])
 {
-	int first = 7;
+	int first = 9;
 	int last = -1;
 
-	memset(valuators, 0, 7 * sizeof(valuators[0]));
+	memset(valuators, 0, 9 * sizeof(valuators[0]));
 
 	for (enum WacomAxisType which = _WACOM_AXIS_LAST; which > 0; which >>= 1)
 	{
@@ -401,9 +401,11 @@ convertAxes(const WacomAxisData *axes, int *first_out, int *num_out, int valuato
 		case WACOM_AXIS_STRIP_Y: pos = 4; break;
 		case WACOM_AXIS_ROTATION: pos = 3; break;
 		case WACOM_AXIS_THROTTLE: pos = 4; break;
-		case WACOM_AXIS_WHEEL: pos = 5; break;
-		case WACOM_AXIS_RING: pos = 5; break;
-		case WACOM_AXIS_RING2: pos = 6; break;
+		case WACOM_AXIS_SCROLL_X: pos = 5; break;
+		case WACOM_AXIS_SCROLL_Y: pos = 6; break;
+		case WACOM_AXIS_WHEEL: pos = 7; break;
+		case WACOM_AXIS_RING: pos = 8; break;
+		case WACOM_AXIS_RING2: pos = 8; break;
 			break;
 		default:
 			abort();
@@ -424,7 +426,7 @@ void wcmEmitProximity(WacomDevicePtr priv, bool is_proximity_in,
 		      const WacomAxisData *axes)
 {
 	InputInfoPtr pInfo = priv->frontend;
-	int valuators[7];
+	int valuators[9];
 	int first_val, num_vals;
 
 	convertAxes(axes, &first_val, &num_vals, valuators);
@@ -435,18 +437,22 @@ void wcmEmitProximity(WacomDevicePtr priv, bool is_proximity_in,
 void wcmEmitMotion(WacomDevicePtr priv, bool is_absolute, const WacomAxisData *axes)
 {
 	InputInfoPtr pInfo = priv->frontend;
-	int valuators[7];
+	int valuators[9];
 	int first_val, num_vals;
 
 	convertAxes(axes, &first_val, &num_vals, valuators);
-
+	DBG(0, priv, "Emitting motion: [%d,%d,%d,%d,%d,%d,%d,%d,%d]\n",valuators[0],valuators[1],valuators[2],valuators[3],valuators[4],valuators[5],valuators[6],valuators[7],valuators[8]);
+	int x,y;
+	wcmAxisGet(axes, WACOM_AXIS_SCROLL_X, &x);
+	wcmAxisGet(axes, WACOM_AXIS_SCROLL_Y, &y);
+	DBG(0, priv, "x=%d, y=%d\n", x, y);
 	xf86PostMotionEventP(pInfo->dev, is_absolute, first_val, num_vals, valuators);
 }
 
 void wcmEmitButton(WacomDevicePtr priv, bool is_absolute, int button, bool is_press, const WacomAxisData *axes)
 {
 	InputInfoPtr pInfo = priv->frontend;
-	int valuators[7];
+	int valuators[9];
 	int first_val, num_vals;
 
 	convertAxes(axes, &first_val, &num_vals, valuators);
@@ -525,22 +531,39 @@ void wcmInitAxis(WacomDevicePtr priv, enum WacomAxisType type,
 			index = 4;
 			label = XIGetKnownProperty(AXIS_LABEL_PROP_ABS_THROTTLE);
 			break;
+		case WACOM_AXIS_SCROLL_X:
+			index = 5;
+			break;
+		case WACOM_AXIS_SCROLL_Y:
+			index = 6;
+			break;
 		case WACOM_AXIS_WHEEL:
 		case WACOM_AXIS_RING:
-			index = 5;
+			index = 7;
 			label = XIGetKnownProperty(AXIS_LABEL_PROP_ABS_WHEEL);
 			break;
 		case WACOM_AXIS_RING2:
-			index = 6;
+			index = 8;
 			break;
+
 		default:
 			abort();
 	}
 
-	InitValuatorAxisStruct(pInfo->dev, index,
-	                       label,
-	                       min, max, res, min_res, max_res,
-	                       Absolute);
+
+	if (type == WACOM_AXIS_SCROLL_X) {
+		DBG(0, priv, "Initting x scroll axis: (pInfo->dev, %d, %x, 120, 0)\n", index, SCROLL_TYPE_HORIZONTAL);
+		SetScrollValuator(pInfo->dev, index, SCROLL_TYPE_HORIZONTAL, 120, 0);
+	} else if (type == WACOM_AXIS_SCROLL_Y) {
+		DBG(0, priv, "Initting y scroll axis: (pInfo->dev, %d, %x, 120, 0)\n", index, SCROLL_TYPE_VERTICAL);
+		SetScrollValuator(pInfo->dev, index, SCROLL_TYPE_VERTICAL, 120, 0);
+	} else {
+		InitValuatorAxisStruct(pInfo->dev, index,
+				label,
+				min, max, res, min_res, max_res,
+				Absolute);
+	}
+
 }
 
 bool wcmInitButtons(WacomDevicePtr priv, unsigned int nbuttons)

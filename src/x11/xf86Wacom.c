@@ -441,12 +441,7 @@ void wcmEmitMotion(WacomDevicePtr priv, bool is_absolute, const WacomAxisData *a
 	int first_val, num_vals;
 
 	convertAxes(axes, &first_val, &num_vals, valuators);
-	DBG(0, priv, "Emitting motion: [%d,%d,%d,%d,%d,%d,%d,%d,%d]\n",valuators[0],valuators[1],valuators[2],valuators[3],valuators[4],valuators[5],valuators[6],valuators[7],valuators[8]);
-	int x,y;
-	wcmAxisGet(axes, WACOM_AXIS_SCROLL_X, &x);
-	wcmAxisGet(axes, WACOM_AXIS_SCROLL_Y, &y);
-	DBG(0, priv, "x=%d, y=%d\n", x, y);
-	xf86PostMotionEventP(pInfo->dev, is_absolute, first_val, num_vals, valuators);
+	xf86PostMotionEventP(pInfo->dev, is_absolute, first_val, num_vals, &valuators[0]+first_val); // I think this was supposed to be here in the first place, because without this the function doesn't work for first_val != 0.
 }
 
 void wcmEmitButton(WacomDevicePtr priv, bool is_absolute, int button, bool is_press, const WacomAxisData *axes)

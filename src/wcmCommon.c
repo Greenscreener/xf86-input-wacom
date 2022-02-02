@@ -151,10 +151,10 @@ static void wcmPanscroll(WacomDevicePtr priv, const WacomDeviceState *ds, int x,
 
 	DBG(0, priv, "Emitting motion x=%d y=%d\n", delta_x, delta_y);
 
-	WacomAxisData axes;
+	WacomAxisData axes = {0};
 	wcmAxisSet(&axes, WACOM_AXIS_SCROLL_X, delta_x);
 	wcmAxisSet(&axes, WACOM_AXIS_SCROLL_Y, delta_y);
-	wcmEmitMotion(priv, TRUE, &axes);
+	wcmEmitMotion(priv, FALSE, &axes);
 }
 
 void wcmResetButtonAction(WacomDevicePtr priv, int button)
@@ -707,8 +707,8 @@ static void wcmUpdateOldState(WacomDevicePtr priv,
 			      const WacomDeviceState *ds, int currentX, int currentY)
 {
 	priv->oldState = *ds;
-	priv->oldState.x = currentX;
-	priv->oldState.y = currentY;
+	// priv->oldState.x = currentX;
+	// priv->oldState.y = currentY;
 }
 
 static void

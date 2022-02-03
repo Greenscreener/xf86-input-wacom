@@ -1,5 +1,5 @@
 project('xf86-input-wacom', 'c',
-	version : '0.40.0', # bump version in configure.ac
+	version : '0.99.1', # bump version in configure.ac
 	license : 'MIT/Expat',
 	default_options : [ 'c_std=gnu99', 'warning_level=2' ],
 	meson_version : '>= 0.50.0')
@@ -137,11 +137,6 @@ src_wacom = src_wacom_core + [
 	'src/x11/xf86WacomProperties.c',
 	'src/x11/xf86Wacom.c',
 ]
-
-deps_wacom = [
-	dep_xserver,
-	dep_libudev,
-] + dep_protos
 
 shared_module(
 	'wacom_drv',
@@ -345,7 +340,7 @@ if build_unittests
 			'wacom-tests',
 			src_wacom_tests,
 			c_args: ['-DUNIT_TESTS'],
-			dependencies: [dep_xserver, dep_libudev, dep_m],
+			dependencies: [dep_xserver, dep_m],
 			include_directories: [dir_include, dir_src],
 	)
 	test('wacom-tests', wacom_tests)

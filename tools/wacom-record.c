@@ -58,6 +58,35 @@ static void debug_message(WacomDevice *device, int debug_level, const char *func
 
 static inline void print_axes(const WacomEventData *data)
 {
+	char buf[1024] = {0};
+	const char *prefix = "";
+	uint32_t mask = data->mask;
+
+	for (uint32_t flag = 0x1; flag <= _WACOM_EVENT_AXIS_LAST; flag <<= 1) {
+		const char *name = "unknown axis";
+		if ((mask & flag) == 0)
+			continue;
+
+		switch (flag) {
+		case WACOM_X: name = "x"; break;
+		case WACOM_Y: name = "y"; break;
+		case WACOM_PRESSURE: name = "pressure"; break;
+		case WACOM_TILT_X: name = "tilt-x"; break;
+		case WACOM_TILT_Y: name = "tilt-y"; break;
+		case WACOM_ROTATION: name = "rotation"; break;
+		case WACOM_THROTTLE: name = "throttle"; break;
+		case WACOM_WHEEL: name = "wheel"; break;
+		case WACOM_RING: name = "ring"; break;
+		case WACOM_RING2: name = "ring"; break;
+		}
+
+		g_assert_cmpint(strlen(buf) + strlen(prefix) + strlen(name), <, sizeof(buf));
+
+		snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), "%s\"%s\"", prefix, name);
+		prefix = ", ";
+	}
+
+	printf("      mask: [ %s ]\n", buf);
 	printf("      axes: { x: %5d, y: %5d, pressure: %4d, tilt: [%3d,%3d], rotation: %3d, throttle: %3d, wheel: %3d, rings: [%3d, %3d] }\n",
 	       data->x, data->y,
 	       (data->mask & WACOM_PRESSURE) ? data->pressure : 0,
@@ -82,7 +111,10 @@ static void proximity(WacomDevice *device, gboolean is_prox_in, WacomEventData *
 static void motion(WacomDevice *device, gboolean is_absolute, WacomEventData *data)
 {
 	printf("    - source: %d\n"
-	       "      event: motion\n", wacom_device_get_id(device));
+	       "      mode: %s\n"
+	       "      event: motion\n",
+	       wacom_device_get_id(device),
+	       is_absolute ? "absolute" : "relative");
 	print_axes(data);
 }
 
@@ -364,16 +396,17 @@ int main(int argc, char **argv)
 
 	++argv; --argc; /* first arg is already in path */
 	while (true) {
+		g_autofree char *path = NULL;
+
 		device = wacom_device_new(driver, name, options);
 		if (!device) {
 			fprintf(stderr, "Unable to record device %s - is this a Wacom tablet?\n", path);
 			return 1;
 		}
 
-		if (--argc == 0)
+		if (--argc <= 0)
 			break;
 
-		g_free(path);
 		path = strdup(*(++argv));
 		wacom_options_set(options, "device", path);
 	}

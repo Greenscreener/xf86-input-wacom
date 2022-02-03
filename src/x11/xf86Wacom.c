@@ -18,9 +18,6 @@
  */
 
 /*
- * This driver is currently able to handle USB Wacom IV and V, serial ISDV4,
- * and bluetooth protocols.
- *
  * Wacom V protocol work done by Raph Levien <raph@gtk.org> and
  * Frédéric Lepied <lepied@xfree86.org>.
  *
@@ -374,12 +371,11 @@ void wcmEmitKeycode(WacomDevicePtr priv, int keycode, int state)
 }
 
 static inline void
-convertAxes(const WacomAxisData *axes, int *first_out, int *num_out, int valuators[9])
+convertAxes(const WacomAxisData *axes, int *first_out, int *num_out, int valuators_out[9])
 {
 	int first = 9;
 	int last = -1;
-
-	memset(valuators, 0, 9 * sizeof(valuators[0]));
+	int valuators[9] = {0};
 
 	for (enum WacomAxisType which = _WACOM_AXIS_LAST; which > 0; which >>= 1)
 	{
@@ -420,13 +416,15 @@ convertAxes(const WacomAxisData *axes, int *first_out, int *num_out, int valuato
 		first = 0;
 	*first_out = first;
 	*num_out = last - first + 1;
+
+	memcpy(valuators_out, &valuators[first], *num_out * sizeof(valuators[0]));
 }
 
 void wcmEmitProximity(WacomDevicePtr priv, bool is_proximity_in,
 		      const WacomAxisData *axes)
 {
 	InputInfoPtr pInfo = priv->frontend;
-	int valuators[9];
+	int valuators[9] = {0};
 	int first_val, num_vals;
 
 	convertAxes(axes, &first_val, &num_vals, valuators);
@@ -437,7 +435,7 @@ void wcmEmitProximity(WacomDevicePtr priv, bool is_proximity_in,
 void wcmEmitMotion(WacomDevicePtr priv, bool is_absolute, const WacomAxisData *axes)
 {
 	InputInfoPtr pInfo = priv->frontend;
-	int valuators[9];
+	int valuators[9] = {0};
 	int first_val, num_vals;
 
 	convertAxes(axes, &first_val, &num_vals, valuators);
@@ -447,7 +445,7 @@ void wcmEmitMotion(WacomDevicePtr priv, bool is_absolute, const WacomAxisData *a
 void wcmEmitButton(WacomDevicePtr priv, bool is_absolute, int button, bool is_press, const WacomAxisData *axes)
 {
 	InputInfoPtr pInfo = priv->frontend;
-	int valuators[9];
+	int valuators[9] = {0};
 	int first_val, num_vals;
 
 	convertAxes(axes, &first_val, &num_vals, valuators);

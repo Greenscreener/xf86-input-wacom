@@ -152,8 +152,8 @@ static void wcmPanscroll(WacomDevicePtr priv, const WacomDeviceState *ds, int x,
 	DBG(0, priv, "Emitting motion x=%d y=%d\n", delta_x, delta_y);
 
 	WacomAxisData axes = {0};
-	wcmAxisSet(&axes, WACOM_AXIS_SCROLL_X, delta_x);
-	wcmAxisSet(&axes, WACOM_AXIS_SCROLL_Y, delta_y);
+	wcmAxisSet(&axes, WACOM_AXIS_SCROLL_X, delta_x*0xffff/threshold);
+	wcmAxisSet(&axes, WACOM_AXIS_SCROLL_Y, delta_y*0xffff/threshold);
 	wcmEmitMotion(priv, FALSE, &axes);
 }
 

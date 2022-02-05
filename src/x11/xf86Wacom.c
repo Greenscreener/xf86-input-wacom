@@ -552,9 +552,9 @@ void wcmInitAxis(WacomDevicePtr priv, enum WacomAxisType type,
 			Absolute);
 
 	if (type == WACOM_AXIS_SCROLL_X) {
-		SetScrollValuator(pInfo->dev, index, SCROLL_TYPE_HORIZONTAL, 120, 0);
+		SetScrollValuator(pInfo->dev, index, SCROLL_TYPE_HORIZONTAL, 0xffff, 0);
 	} else if (type == WACOM_AXIS_SCROLL_Y) {
-		SetScrollValuator(pInfo->dev, index, SCROLL_TYPE_VERTICAL, 120, 0);
+		SetScrollValuator(pInfo->dev, index, SCROLL_TYPE_VERTICAL, 0xffff, 0);
 	}
 
 }

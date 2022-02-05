@@ -707,8 +707,8 @@ static void wcmUpdateOldState(WacomDevicePtr priv,
 			      const WacomDeviceState *ds, int currentX, int currentY)
 {
 	priv->oldState = *ds;
-	// priv->oldState.x = currentX;
-	// priv->oldState.y = currentY;
+	priv->oldState.x = currentX;
+	priv->oldState.y = currentY;
 }
 
 static void

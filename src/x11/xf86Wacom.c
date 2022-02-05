@@ -420,37 +420,96 @@ convertAxes(const WacomAxisData *axes, int *first_out, int *num_out, int valuato
 	memcpy(valuators_out, &valuators[first], *num_out * sizeof(valuators[0]));
 }
 
+static inline void
+convertAxesM(const WacomAxisData *axes, ValuatorMask *mask) {
+
+
+	for (enum WacomAxisType which = _WACOM_AXIS_LAST; which > 0; which >>= 1)
+	{
+		int value;
+		Bool has_value = wcmAxisGet(axes, which, &value);
+		int pos;
+
+		if (!has_value)
+			continue;
+
+		/* Positions need to match wcmInitAxis */
+		switch (which){
+			case WACOM_AXIS_X: pos = 0; break;
+			case WACOM_AXIS_Y: pos = 1; break;
+			case WACOM_AXIS_PRESSURE: pos = 2; break;
+			case WACOM_AXIS_TILT_X: pos = 3; break;
+			case WACOM_AXIS_TILT_Y: pos = 4; break;
+			case WACOM_AXIS_STRIP_X: pos = 3; break;
+			case WACOM_AXIS_STRIP_Y: pos = 4; break;
+			case WACOM_AXIS_ROTATION: pos = 3; break;
+			case WACOM_AXIS_THROTTLE: pos = 4; break;
+			case WACOM_AXIS_SCROLL_X: pos = 5; break;
+			case WACOM_AXIS_SCROLL_Y: pos = 6; break;
+			case WACOM_AXIS_WHEEL: pos = 7; break;
+			case WACOM_AXIS_RING: pos = 8; break;
+			case WACOM_AXIS_RING2: pos = 8; break;
+					       break;
+			default:
+					       abort();
+		}
+
+		valuator_mask_set(mask, pos, value);
+	}
+}
+
 void wcmEmitProximity(WacomDevicePtr priv, bool is_proximity_in,
 		      const WacomAxisData *axes)
 {
 	InputInfoPtr pInfo = priv->frontend;
+	/*
 	int valuators[9] = {0};
 	int first_val, num_vals;
 
 	convertAxes(axes, &first_val, &num_vals, valuators);
 
 	xf86PostProximityEventP(pInfo->dev, is_proximity_in, first_val, num_vals, valuators);
+	*/
+	ValuatorMask *mask = valuator_mask_new(9);
+	convertAxesM(axes, mask);
+	
+	xf86PostProximityEventM(pInfo->dev, is_proximity_in, mask);
 }
 
 void wcmEmitMotion(WacomDevicePtr priv, bool is_absolute, const WacomAxisData *axes)
 {
 	InputInfoPtr pInfo = priv->frontend;
+	/*
 	int valuators[9] = {0};
 	int first_val, num_vals;
 
 	convertAxes(axes, &first_val, &num_vals, valuators);
 	xf86PostMotionEventP(pInfo->dev, is_absolute, first_val, num_vals, valuators);
+	*/
+	
+	ValuatorMask *mask = valuator_mask_new(9);
+	convertAxesM(axes, mask);
+
+	xf86PostMotionEventM(pInfo->dev, is_absolute, mask);
 }
 
 void wcmEmitButton(WacomDevicePtr priv, bool is_absolute, int button, bool is_press, const WacomAxisData *axes)
 {
 	InputInfoPtr pInfo = priv->frontend;
+	/*
 	int valuators[9] = {0};
 	int first_val, num_vals;
 
 	convertAxes(axes, &first_val, &num_vals, valuators);
 
 	xf86PostButtonEventP(pInfo->dev, is_absolute, button, is_press, first_val, num_vals, valuators);
+	*/
+
+	ValuatorMask *mask = valuator_mask_new(9);
+	convertAxesM(axes, mask);
+
+
+	xf86PostButtonEventM(pInfo->dev, is_absolute, button, is_press, mask);
 }
 
 void wcmEmitTouch(WacomDevicePtr priv, int type, unsigned int touchid, int x, int y)

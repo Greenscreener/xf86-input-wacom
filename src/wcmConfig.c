@@ -952,10 +952,10 @@ static int wcmInitAxes(WacomDevicePtr priv)
 	}
 
 	/* sixth valuator: scroll_x */
-	wcmInitAxis(priv, WACOM_AXIS_SCROLL_X, 0, 0, 0);
+	wcmInitAxis(priv, WACOM_AXIS_SCROLL_X, -1, -1, 0);
 
 	/* seventh valuator: scroll_y */
-	wcmInitAxis(priv, WACOM_AXIS_SCROLL_Y, 0, 0, 0);
+	wcmInitAxis(priv, WACOM_AXIS_SCROLL_Y, -1, -1, 0);
 
 	/* eigth valuator: airbrush: abs-wheel, artpen: rotation, pad:abs-wheel */
 	res = 0;

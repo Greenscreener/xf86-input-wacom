@@ -526,9 +526,11 @@ void wcmInitAxis(WacomDevicePtr priv, enum WacomAxisType type,
 			break;
 		case WACOM_AXIS_SCROLL_X:
 			index = 5;
+			label = XIGetKnownProperty(AXIS_LABEL_PROP_REL_HSCROLL);
 			break;
 		case WACOM_AXIS_SCROLL_Y:
 			index = 6;
+			label = XIGetKnownProperty(AXIS_LABEL_PROP_REL_VSCROLL);
 			break;
 		case WACOM_AXIS_WHEEL:
 		case WACOM_AXIS_RING:
@@ -544,17 +546,15 @@ void wcmInitAxis(WacomDevicePtr priv, enum WacomAxisType type,
 	}
 
 
+	InitValuatorAxisStruct(pInfo->dev, index,
+			label,
+			min, max, res, min_res, max_res,
+			Absolute);
+
 	if (type == WACOM_AXIS_SCROLL_X) {
-		DBG(0, priv, "Initting x scroll axis: (pInfo->dev, %d, %x, 120, 0)\n", index, SCROLL_TYPE_HORIZONTAL);
 		SetScrollValuator(pInfo->dev, index, SCROLL_TYPE_HORIZONTAL, 120, 0);
 	} else if (type == WACOM_AXIS_SCROLL_Y) {
-		DBG(0, priv, "Initting y scroll axis: (pInfo->dev, %d, %x, 120, 0)\n", index, SCROLL_TYPE_VERTICAL);
 		SetScrollValuator(pInfo->dev, index, SCROLL_TYPE_VERTICAL, 120, 0);
-	} else {
-		InitValuatorAxisStruct(pInfo->dev, index,
-				label,
-				min, max, res, min_res, max_res,
-				Absolute);
 	}
 
 }

@@ -439,7 +439,7 @@ void wcmEmitMotion(WacomDevicePtr priv, bool is_absolute, const WacomAxisData *a
 	int first_val, num_vals;
 
 	convertAxes(axes, &first_val, &num_vals, valuators);
-	xf86PostMotionEventP(pInfo->dev, is_absolute, first_val, num_vals, &valuators[0]+first_val); // I think this was supposed to be here in the first place, because without this the function doesn't work for first_val != 0.
+	xf86PostMotionEventP(pInfo->dev, is_absolute, first_val, num_vals, valuators);
 }
 
 void wcmEmitButton(WacomDevicePtr priv, bool is_absolute, int button, bool is_press, const WacomAxisData *axes)

@@ -228,6 +228,8 @@ static inline const char* wcmAxisName(enum WacomAxisType which)
 	case WACOM_AXIS_WHEEL: return "wheel";
 	case WACOM_AXIS_RING: return "ring";
 	case WACOM_AXIS_RING2: return "ring2";
+	case WACOM_AXIS_SCROLL_X: return "scroll-x";
+	case WACOM_AXIS_SCROLL_Y: return "scroll-y";
 	default:
 		abort();
 	}

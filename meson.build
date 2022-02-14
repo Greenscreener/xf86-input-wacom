@@ -1,8 +1,8 @@
 project('xf86-input-wacom', 'c',
-	version : '0.99.1', # bump version in configure.ac
+	version : '0.99.3', # bump version in configure.ac
 	license : 'MIT/Expat',
 	default_options : [ 'c_std=gnu99', 'warning_level=2' ],
-	meson_version : '>= 0.50.0')
+	meson_version : '>= 0.51.0')
 
 wacom_version = meson.project_version().split('.')
 
@@ -62,12 +62,12 @@ dep_m = cc.find_library('m')
 
 dir_wacom_headers = get_option('sdkdir')
 if dir_wacom_headers == ''
-	dir_wacom_headers = dep_xserver.get_pkgconfig_variable('sdkdir')
+	dir_wacom_headers = dep_xserver.get_variable(pkgconfig: 'sdkdir')
 endif
 
 dir_xorg_modules = get_option('xorg-module-dir')
 if dir_xorg_modules == ''
-	dir_xorg_modules = dep_xserver.get_pkgconfig_variable('moduledir') / 'input'
+	dir_xorg_modules = dep_xserver.get_variable(pkgconfig: 'moduledir') / 'input'
 endif
 
 dir_xorg_conf = get_option('xorg-conf-dir')
@@ -103,7 +103,9 @@ config_h.set('PACKAGE_VERSION_MINOR', wacom_version[1])
 config_h.set('PACKAGE_VERSION_PATCHLEVEL', wacom_version[2])
 
 # shortcut to avoid linking to _Xasprintf if xorg-server isn't included
-if cc.has_function('asprintf', prefix: '#define _GNU_SOURCE')
+if cc.has_function('asprintf',
+	prefix: '#define _GNU_SOURCE',
+	args: ['-Wno-error=format'])
 	config_h.set10('HAVE_ASPRINTF', true)
 endif
 
@@ -307,19 +309,7 @@ if get_option('serial-device-support')
 endif
 
 # Tests
-have_wrap = cc.links('''
-void __wrap_exit (int s) {
-	__real_exit (0);
-}
-int main(void) {
-	exit(1);
-}''',
-args: '-Wl,-wrap,exit')
-
-if get_option('unittests').enabled() and not have_wrap
-	error('ld -wrap support required to build unit tests')
-endif
-build_unittests = have_wrap and not get_option('unittests').disabled()
+build_unittests = not get_option('unittests').disabled()
 
 if build_unittests
 	xsetwacom_test = executable(
@@ -344,7 +334,6 @@ if build_unittests
 		install: false,
 		c_args: ['-DENABLE_TESTS', '-fvisibility=default'],
 	)
-	dep_wacom_drv_test = declare_dependency(link_with: wacom_drv_test)
 	dep_dl = cc.find_library('dl')
 	# wacom-tests.c is just a stub to load the above driver and run the
 	# entry point.
@@ -352,8 +341,11 @@ if build_unittests
 		executable(
 		'wacom-tests',
 		'test/wacom-tests.c',
-		dependencies: [dep_wacom_drv_test, dep_dl],
-		install: false)
+		dependencies: [dep_dl],
+		install: false),
+		env: [
+			'LD_LIBRARY_PATH=@0@'.format(meson.current_build_dir()),
+		]
 	)
 
 endif

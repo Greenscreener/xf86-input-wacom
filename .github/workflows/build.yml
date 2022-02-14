@@ -1,9 +1,13 @@
 on: [ push, pull_request ]
 
 env:
-  CFLAGS: -Werror -Wall -Wextra -Wno-error=sign-compare -Wno-unused-parameter
-  UBUNTU_PACKAGES: xutils-dev xserver-xorg-dev libx11-dev libxi-dev libxrandr-dev libxinerama-dev libudev-dev
+  CFLAGS: -Werror -Wall -Wextra -Wno-error=sign-compare -Wno-unused-parameter -Wno-error=missing-field-initializers
+  UBUNTU_PACKAGES: |
+    xutils-dev xserver-xorg-dev libx11-dev libxi-dev libxrandr-dev libxinerama-dev libudev-dev
+    libgirepository1.0-dev libevdev-dev
+    python3-pip
   PIP_PACKAGES: meson ninja
+  MESON_REQUIRED_VERSION: 0.51.0
 
 jobs:
   compile-with-autotools:
@@ -66,10 +70,6 @@ jobs:
           - '-Db_sanitize=address,undefined -Db_lundef=false'
     steps:
       - uses: actions/checkout@v2
-      # install python so we get pip for meson
-      - uses: actions/setup-python@v1
-        with:
-          python-version: '3.8'
       - uses: linuxwacom/libwacom/.github/actions/pkginstall@master
         with:
           apt: $UBUNTU_PACKAGES
@@ -77,14 +77,37 @@ jobs:
       - name: meson test ${{matrix.meson_options}}
         uses: linuxwacom/libwacom/./.github/actions/meson@master
         with:
-          meson_args: ${{matrix.meson_options}}
+          meson_args: -Dauto_features=enabled ${{matrix.meson_options}}
         env:
           CC: ${{matrix.compiler}}
       # Capture all the meson logs, even if we failed
       - uses: actions/upload-artifact@v2
         if: ${{ always() }}  # even if we fail
         with:
-          name: meson test logs
+          name: meson-test-logs-${{github.job}}-${{matrix.compiler}}-${{matrix.meson_options}}
+          path: |
+            builddir/meson-logs/testlog*.txt
+            builddir/meson-logs/meson-log.txt
+
+  compile-with-meson-exact-version:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+      - uses: linuxwacom/libwacom/.github/actions/pkginstall@master
+        with:
+          apt: $UBUNTU_PACKAGES
+          pip: $PIP_PACKAGES
+      - name: install exact meson version
+        run: pip install "meson == $MESON_REQUIRED_VERSION"
+      - name: meson test
+        uses: linuxwacom/libwacom/./.github/actions/meson@master
+        with:
+          meson_args: -Dauto_features=enabled
+      # Capture all the meson logs, even if we failed
+      - uses: actions/upload-artifact@v2
+        if: ${{ always() }}  # even if we fail
+        with:
+          name: meson-test-logs-${{github.job}}
           path: |
             builddir/meson-logs/testlog*.txt
             builddir/meson-logs/meson-log.txt
@@ -129,10 +152,6 @@ jobs:
       TARBALLDIR: '_tarball_dir'
       INSTALLDIR: '/tmp/_inst'
     steps:
-      # install python so we get pip for meson
-      - uses: actions/setup-python@v1
-        with:
-          python-version: '3.8'
       - uses: linuxwacom/libwacom/.github/actions/pkginstall@master
         with:
           apt: $UBUNTU_PACKAGES
@@ -150,5 +169,44 @@ jobs:
         uses: linuxwacom/libwacom/.github/actions/meson@master
         with:
           srcdir: $TARBALLDIR/xf86-input-wacom-*/
-          meson_args: --prefix="$INSTALLDIR"
+          meson_args: -Dauto_features=enabled --prefix="$INSTALLDIR"
           ninja_args: test
+      # Capture all the meson logs, even if we failed
+      - uses: actions/upload-artifact@v2
+        if: ${{ always() }}  # even if we fail
+        with:
+          name: tarball-build-meson-test-logs
+          path: |
+            builddir/meson-logs/testlog*.txt
+            builddir/meson-logs/meson-log.txt
+
+  check-tarball-files:
+    needs: compile-with-autotools
+    runs-on: ubuntu-20.04
+    env:
+      TARBALLDIR: '_tarball_dir'
+    steps:
+      - name: Checkout the repo
+        uses: actions/checkout@v2
+      - name: fetch tarball from previous job(s)
+        uses: actions/download-artifact@v2
+        with:
+          name: tarball
+      - name: list git files
+        run: git ls-files | grep -v -e '.gitignore' -e '.github' -e '.editorconfig' -e 'release.sh' -e 'git-version-gen' > files-in-git.txt
+      - name: list tarball files
+        run: |
+          tar ft xf86-input-wacom-*.tar.bz2 | sed -e 's|^[^/]*/||' | sort > files-in-tarball.txt
+      - name: check for missing files
+        run: |
+          rm -f missing-files.txt
+          for filename in $(cat files-in-git.txt); do
+            if ! grep -q "$filename" files-in-tarball.txt; then
+                echo "$filename" >> missing-files.txt
+            fi
+          done
+          if [[ -e missing-files.txt ]]; then
+            echo "Files missing from tarball:"
+            cat missing-files.txt
+            exit 1
+          fi

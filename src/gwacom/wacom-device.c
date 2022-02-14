@@ -45,7 +45,7 @@ struct _WacomDevice {
 	char *name;
 	char *path;
 
-	enum WacomToolType type;
+	WacomToolType type;
 
 	gboolean enabled;
 
@@ -67,6 +67,7 @@ struct _WacomDevice {
 
 G_DEFINE_TYPE (WacomOptions, wacom_options, G_TYPE_OBJECT)
 G_DEFINE_TYPE (WacomDevice, wacom_device, G_TYPE_OBJECT)
+G_DEFINE_BOXED_TYPE (WacomEventData, wacom_event_data, wacom_event_data_copy, wacom_event_data_free)
 G_DEFINE_BOXED_TYPE (WacomAxis, wacom_axis, wacom_axis_copy, wacom_axis_free)
 
 WacomOptions *wacom_options_new(const char *key, ...)
@@ -115,6 +116,27 @@ void wacom_options_set(WacomOptions *opts, const char *key, const char *value)
 	g_return_if_fail(key != NULL);
 	g_return_if_fail(value != NULL);
 	g_hash_table_replace(opts->ht, g_ascii_strdown(key, -1), g_strdup(value));
+}
+
+
+static void append_slist(gpointer key, gpointer value, gpointer user_data)
+{
+	GSList **list = user_data;
+	*list = g_slist_append(*list, g_strdup(key));
+}
+
+/**
+ * wacom_options_list_keys:
+ *
+ * Returns: (element-type utf8) (transfer full):
+ */
+GSList *wacom_options_list_keys(WacomOptions *opts)
+{
+	GSList *list = NULL;
+
+	g_hash_table_foreach(opts->ht, append_slist, &list);
+
+	return list;
 }
 
 static void
@@ -206,7 +228,7 @@ wacom_device_preinit(WacomDevice *device)
 {
 	gboolean rc = wcmPreInit(device->priv) == Success;
 
-	device->type = (enum WacomToolType)device->priv->type;
+	device->type = (WacomToolType)device->priv->type;
 
 	return rc;
 }
@@ -267,6 +289,11 @@ WacomDriver *wacom_device_get_driver(WacomDevice *device)
 void *wacom_device_get_impl(WacomDevice *device)
 {
 	return device->priv;
+}
+
+WacomOptions *wacom_device_get_options(WacomDevice *device)
+{
+	return device->options;
 }
 
 /****************** Driver layer *****************/
@@ -376,11 +403,17 @@ void
 wcmLogDebugCommon(WacomCommonPtr common, int debug_level, const char *func, const char *format, ...)
 {
 	/* We just log the common ones through the first device in the list,
-	 * probably good enough */
-	WacomDevice *device = common->wcmDevices->frontend;
+	 * probably good enough. Unless there are no devices (setup error on
+	 * first device), then we silently discard the message */
+
+	WacomDevice *device = NULL;
 	g_autofree char *str = NULL;
 	va_list args;
 
+	if (!common->wcmDevices)
+		return;
+
+	device = common->wcmDevices->frontend;
 	va_start(args, format);
 	str = g_strdup_vprintf(format, args);
 	va_end(args);
@@ -491,12 +524,12 @@ void wcmEmitButton(WacomDevicePtr priv, bool is_absolute, int button, bool is_pr
 void wcmEmitTouch(WacomDevicePtr priv, int type, unsigned int touchid, int x, int y)
 {
 	WacomDevice *device = priv->frontend;
-	enum WacomTouchState state;
+	WacomTouchState state;
 
 	switch (type) {
-	case XI_TouchBegin: state = WACOM_TOUCH_BEGIN; break;
-	case XI_TouchUpdate: state = WACOM_TOUCH_UPDATE; break;
-	case XI_TouchEnd: state = WACOM_TOUCH_END; break;
+	case XI_TouchBegin: state = WTOUCH_BEGIN; break;
+	case XI_TouchUpdate: state = WTOUCH_UPDATE; break;
+	case XI_TouchEnd: state = WTOUCH_END; break;
 	default:
 			  abort();
 	}
@@ -514,13 +547,13 @@ void wcmInitAxis(WacomDevicePtr priv, enum WacomAxisType type,
 {
 	WacomDevice *device = priv->frontend;
 	WacomAxis ax = {
-		.type = (enum WacomEventAxis)type,
+		.type = (WacomEventAxis)type,
 		.min = min,
 		.max = max,
 		.res = res,
 	};
 	device->axes[ffs(type)] = ax;
-	device->axis_mask |= (enum WacomEventAxis)type;
+	device->axis_mask |= (WacomEventAxis)type;
 }
 
 bool wcmInitButtons(WacomDevicePtr priv, unsigned int nbuttons)
@@ -563,15 +596,15 @@ const char *wacom_device_get_name(WacomDevice *device)
 	return device->name;
 }
 
-enum WacomToolType wacom_device_get_tool_type(WacomDevice *device)
+WacomToolType wacom_device_get_tool_type(WacomDevice *device)
 {
 	return device->type;
 }
 
 const WacomAxis *wacom_device_get_axis(WacomDevice *device,
-				       enum WacomEventAxis which)
+				       WacomEventAxis which)
 {
-	g_return_val_if_fail(which <= WACOM_RING2, NULL);
+	g_return_val_if_fail(which <= _WAXIS_LAST, NULL);
 
 	return (device->axis_mask & which) ? &device->axes[ffs(which)] : NULL;
 }
@@ -819,7 +852,7 @@ wacom_device_class_init(WacomDeviceClass *klass)
 			     0, NULL, NULL, NULL, G_TYPE_NONE,
 			     /* is_absolute, button, is_press, axes */
 			     4, G_TYPE_BOOLEAN, G_TYPE_UINT,
-			     G_TYPE_BOOLEAN, G_TYPE_POINTER);
+			     G_TYPE_BOOLEAN, WACOM_TYPE_EVENT_DATA);
 
 	/**
 	 * WacomDevice::motion:
@@ -835,7 +868,7 @@ wacom_device_class_init(WacomDeviceClass *klass)
 			     G_SIGNAL_RUN_FIRST,
 			     0, NULL, NULL, NULL, G_TYPE_NONE,
 			     /* is_absolute, axes */
-			     2, G_TYPE_BOOLEAN, G_TYPE_POINTER);
+			     2, G_TYPE_BOOLEAN, WACOM_TYPE_EVENT_DATA);
 
 	/**
 	 * WacomDevice::touch:
@@ -870,7 +903,7 @@ wacom_device_class_init(WacomDeviceClass *klass)
 			     G_SIGNAL_RUN_FIRST,
 			     0, NULL, NULL, NULL, G_TYPE_NONE,
 			     /* is_prox_in, axes */
-			     2, G_TYPE_BOOLEAN, G_TYPE_POINTER);
+			     2, G_TYPE_BOOLEAN, WACOM_TYPE_EVENT_DATA);
 
 	/**
 	 * WacomDevice::log-message:
@@ -956,4 +989,16 @@ WacomAxis* wacom_axis_copy(const WacomAxis *axis)
 void wacom_axis_free(WacomAxis *axis)
 {
 	free(axis);
+}
+
+WacomEventData* wacom_event_data_copy(const WacomEventData *event_data)
+{
+	WacomEventData *new_event_data = malloc(sizeof(*event_data));
+	memcpy(new_event_data, event_data, sizeof(*event_data));
+	return new_event_data;
+}
+
+void wacom_event_data_free(WacomEventData *event_data)
+{
+	free(event_data);
 }

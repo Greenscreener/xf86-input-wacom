@@ -54,7 +54,7 @@ WacomDevicePtr wcmAllocate(void *frontend, const char *name)
 		goto error;
 
 	priv->next = NULL;
-	priv->name = strdup(name);
+	priv->name = strdup(name ? name : "unnamed device");
 	priv->frontend = frontend;
 	priv->common = common;       /* common info pointer */
 	priv->oldCursorHwProx = 0;   /* previous cursor hardware proximity */
@@ -724,8 +724,7 @@ int wcmPreInit(WacomDevicePtr priv)
 		goto SetupProc_fail;
 
 	priv->common->device_path = device;
-	priv->debugLevel = wcmOptGetInt(priv,
-					    "DebugLevel", priv->debugLevel);
+	priv->debugLevel = wcmOptGetInt(priv, "DebugLevel", priv->debugLevel);
 
 	/* check if the same device file has been added already */
 	if (wcmIsDuplicate(device, priv))
@@ -743,8 +742,7 @@ int wcmPreInit(WacomDevicePtr priv)
 		/* initialize supported keys with the first tool on the port */
 		wcmDeviceTypeKeys(priv);
 
-	common->debugLevel = wcmOptGetInt(priv,
-					      "CommonDBG", common->debugLevel);
+	common->debugLevel = wcmOptGetInt(priv, "CommonDBG", common->debugLevel);
 	oldname = strdup(priv->name);
 
 	if (wcmIsHotpluggedDevice(priv))

@@ -19,6 +19,7 @@
 #include <config.h>
 #include "config-ver.h"
 
+#include <assert.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <glib.h>
@@ -62,22 +63,22 @@ static inline void print_axes(const WacomEventData *data)
 	const char *prefix = "";
 	uint32_t mask = data->mask;
 
-	for (uint32_t flag = 0x1; flag <= _WACOM_EVENT_AXIS_LAST; flag <<= 1) {
+	for (uint32_t flag = 0x1; flag <= _WAXIS_LAST; flag <<= 1) {
 		const char *name = "unknown axis";
 		if ((mask & flag) == 0)
 			continue;
 
 		switch (flag) {
-		case WACOM_X: name = "x"; break;
-		case WACOM_Y: name = "y"; break;
-		case WACOM_PRESSURE: name = "pressure"; break;
-		case WACOM_TILT_X: name = "tilt-x"; break;
-		case WACOM_TILT_Y: name = "tilt-y"; break;
-		case WACOM_ROTATION: name = "rotation"; break;
-		case WACOM_THROTTLE: name = "throttle"; break;
-		case WACOM_WHEEL: name = "wheel"; break;
-		case WACOM_RING: name = "ring"; break;
-		case WACOM_RING2: name = "ring"; break;
+		case WAXIS_X: name = "x"; break;
+		case WAXIS_Y: name = "y"; break;
+		case WAXIS_PRESSURE: name = "pressure"; break;
+		case WAXIS_TILT_X: name = "tilt-x"; break;
+		case WAXIS_TILT_Y: name = "tilt-y"; break;
+		case WAXIS_ROTATION: name = "rotation"; break;
+		case WAXIS_THROTTLE: name = "throttle"; break;
+		case WAXIS_WHEEL: name = "wheel"; break;
+		case WAXIS_RING: name = "ring"; break;
+		case WAXIS_RING2: name = "ring"; break;
 		}
 
 		g_assert_cmpint(strlen(buf) + strlen(prefix) + strlen(name), <, sizeof(buf));
@@ -89,14 +90,14 @@ static inline void print_axes(const WacomEventData *data)
 	printf("      mask: [ %s ]\n", buf);
 	printf("      axes: { x: %5d, y: %5d, pressure: %4d, tilt: [%3d,%3d], rotation: %3d, throttle: %3d, wheel: %3d, rings: [%3d, %3d] }\n",
 	       data->x, data->y,
-	       (data->mask & WACOM_PRESSURE) ? data->pressure : 0,
-	       (data->mask & WACOM_TILT_X) ? data->tilt_x : 0,
-	       (data->mask & WACOM_TILT_Y) ? data->tilt_y : 0,
-	       (data->mask & WACOM_ROTATION) ? data->rotation : 0,
-	       (data->mask & WACOM_THROTTLE) ? data->throttle : 0,
-	       (data->mask & WACOM_WHEEL) ? data->wheel : 0,
-	       (data->mask & WACOM_RING) ? data->ring : 0,
-	       (data->mask & WACOM_RING2) ? data->ring2 : 0);
+	       (data->mask & WAXIS_PRESSURE) ? data->pressure : 0,
+	       (data->mask & WAXIS_TILT_X) ? data->tilt_x : 0,
+	       (data->mask & WAXIS_TILT_Y) ? data->tilt_y : 0,
+	       (data->mask & WAXIS_ROTATION) ? data->rotation : 0,
+	       (data->mask & WAXIS_THROTTLE) ? data->throttle : 0,
+	       (data->mask & WAXIS_WHEEL) ? data->wheel : 0,
+	       (data->mask & WAXIS_RING) ? data->ring : 0,
+	       (data->mask & WAXIS_RING2) ? data->ring2 : 0);
 }
 
 static void proximity(WacomDevice *device, gboolean is_prox_in, WacomEventData *data)
@@ -155,10 +156,21 @@ static void evdev(WacomDevice *device, const struct input_event *evdev)
 
 static void device_added(WacomDriver *driver, WacomDevice *device)
 {
+	WacomOptions *options = wacom_device_get_options(device);
+	GSList *opts = wacom_options_list_keys(options);
+
 	printf("    - source: %d\n"
 	       "      event: new-device\n"
 	       "      name: \"%s\"\n",
 	       wacom_device_get_id(device), wacom_device_get_name(device));
+
+	printf("      options:\n");
+	for (guint i = 0; i < g_slist_length(opts); i++) {
+		gchar *key = g_slist_nth_data(opts, i);
+		printf("      - %s: \"%s\"\n", key, wacom_options_get(options, key));
+	}
+
+	g_slist_free_full(g_steal_pointer(&opts), g_free);
 
 	g_signal_connect(device, "log-message", G_CALLBACK(log_message), NULL);
 	g_signal_connect(device, "debug-message", G_CALLBACK(debug_message), NULL);
@@ -179,12 +191,12 @@ static void device_added(WacomDriver *driver, WacomDevice *device)
 		const char *typestr = NULL;
 
 		switch(wacom_device_get_tool_type(device)) {
-			case WACOM_TOOL_INVALID: typestr = "invalid"; break;
-			case WACOM_TOOL_STYLUS: typestr = "stylus"; break;
-			case WACOM_TOOL_ERASER: typestr = "eraser"; break;
-			case WACOM_TOOL_CURSOR: typestr = "cursor"; break;
-			case WACOM_TOOL_PAD: typestr = "pad"; break;
-			case WACOM_TOOL_TOUCH: typestr = "touch"; break;
+			case WTOOL_INVALID: typestr = "invalid"; break;
+			case WTOOL_STYLUS: typestr = "stylus"; break;
+			case WTOOL_ERASER: typestr = "eraser"; break;
+			case WTOOL_CURSOR: typestr = "cursor"; break;
+			case WTOOL_PAD: typestr = "pad"; break;
+			case WTOOL_TOUCH: typestr = "touch"; break;
 
 		}
 
@@ -201,7 +213,7 @@ static void device_added(WacomDriver *driver, WacomDevice *device)
 		       wacom_device_get_num_touches(device),
 		       wacom_device_get_num_axes(device));
 		printf("        axes:\n");
-		for (enum WacomEventAxis which = WACOM_X; which <= WACOM_RING2; which <<= 1) {
+		for (WacomEventAxis which = WAXIS_X; which <= _WAXIS_LAST; which <<= 1) {
 			const WacomAxis *axis = wacom_device_get_axis(device, which);
 			const char *typestr = NULL;
 
@@ -209,18 +221,18 @@ static void device_added(WacomDriver *driver, WacomDevice *device)
 				continue;
 
 			switch (axis->type) {
-				case WACOM_X: typestr = "x"; break;
-				case WACOM_Y: typestr = "y"; break;
-				case WACOM_PRESSURE: typestr = "pressure"; break;
-				case WACOM_TILT_X: typestr = "tilt_x"; break;
-				case WACOM_TILT_Y: typestr = "tilt_y"; break;
-				case WACOM_STRIP_X: typestr = "strip_x"; break;
-				case WACOM_STRIP_Y: typestr = "strip_y"; break;
-				case WACOM_ROTATION: typestr = "rotation"; break;
-				case WACOM_THROTTLE: typestr = "throttle"; break;
-				case WACOM_WHEEL: typestr = "wheel"; break;
-				case WACOM_RING: typestr = "ring"; break;
-				case WACOM_RING2: typestr = "ring2"; break;
+				case WAXIS_X: typestr = "x"; break;
+				case WAXIS_Y: typestr = "y"; break;
+				case WAXIS_PRESSURE: typestr = "pressure"; break;
+				case WAXIS_TILT_X: typestr = "tilt_x"; break;
+				case WAXIS_TILT_Y: typestr = "tilt_y"; break;
+				case WAXIS_STRIP_X: typestr = "strip_x"; break;
+				case WAXIS_STRIP_Y: typestr = "strip_y"; break;
+				case WAXIS_ROTATION: typestr = "rotation"; break;
+				case WAXIS_THROTTLE: typestr = "throttle"; break;
+				case WAXIS_WHEEL: typestr = "wheel"; break;
+				case WAXIS_RING: typestr = "ring"; break;
+				case WAXIS_RING2: typestr = "ring2"; break;
 			}
 
 			printf("          - {type: %-12s, range: [%5d, %5d], resolution: %5d}\n",
@@ -285,13 +297,6 @@ static char *find_device(void)
 	return g_strdup_printf("/dev/input/event%d", selected_device);
 }
 
-static void print_device_info(const char *path, char *name)
-{
-	printf("  device:\n");
-	printf("    path: %s\n", path);
-	printf("    name: \"%s\"\n", name);
-}
-
 static char *get_device_name(const char *path)
 {
 	struct udev *udev;
@@ -333,8 +338,7 @@ int main(int argc, char **argv)
 	g_autoptr(GMainLoop) loop = NULL;
 	g_autoptr(GOptionContext) context = g_option_context_new("- record events from a Wacom device");
 	GError *error = NULL;
-	g_autofree char *path = NULL;
-	g_autofree char *name = NULL;
+	g_autofree char *autopath = NULL;
 
 	g_option_context_add_main_entries(context, opts, NULL);
 	if (!g_option_context_parse (context, &argc, &argv, &error)) {
@@ -347,25 +351,20 @@ int main(int argc, char **argv)
 		return 0;
 	}
 
-	if (argc <= 1)
-		path = find_device();
-	else
-		path = strdup(argv[1]);
-
-	if (!path) {
-		fprintf(stderr, "Invalid device path or unable to find device");
-		return 1;
+	if (argc <= 1) {
+		autopath = find_device();
+		if (!autopath) {
+			fprintf(stderr, "Invalid device path or unable to find device");
+			return 1;
+		}
 	}
 
 	printf("wacom-record:\n");
 	printf("  version: %s\n", PACKAGE_VERSION);
 	printf("  git: %s\n", BUILD_VERSION);
 
-	name = get_device_name(path);
-	print_device_info(path, name);
-
 	driver = wacom_driver_new();
-	options	= wacom_options_new("device", path, NULL);
+	options	= wacom_options_new(NULL, NULL);
 	if (grab_device)
 		wacom_options_set(options, "Grab", "true");
 	if (debug_level) {
@@ -377,13 +376,11 @@ int main(int argc, char **argv)
 		g_auto(GStrv) strv = g_strsplit(driver_options, ",", -1);
 		char **opt = strv;
 
-		printf("  options:\n");
 
 		while (*opt) {
 			g_auto(GStrv) kv = g_strsplit(*opt, "=", 2);
 			g_return_val_if_fail(kv[0] != NULL, 1);
 			g_return_val_if_fail(kv[1] != NULL, 1);
-			printf("    - %s: \"%s\"\n", kv[0], kv[1]);
 			wacom_options_set(options, kv[0], kv[1]);
 			opt++;
 		}
@@ -396,19 +393,21 @@ int main(int argc, char **argv)
 
 	++argv; --argc; /* first arg is already in path */
 	while (true) {
-		g_autofree char *path = NULL;
+		g_autofree char *path = (autopath) ? autopath : strdup(*argv);
+		g_autofree char *name = get_device_name(path);
+
+		wacom_options_set(options, "device", path);
+		name = get_device_name(path);
+		if (!name)
+			name = g_strdup_printf("Unamed device %s", path);
 
 		device = wacom_device_new(driver, name, options);
-		if (!device) {
-			fprintf(stderr, "Unable to record device %s - is this a Wacom tablet?\n", path);
-			return 1;
-		}
+		assert(device);
 
 		if (--argc <= 0)
 			break;
+		argv++;
 
-		path = strdup(*(++argv));
-		wacom_options_set(options, "device", path);
 	}
 
 

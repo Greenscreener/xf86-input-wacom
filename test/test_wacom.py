@@ -203,3 +203,38 @@ def test_axis_updates(mainloop, opts, axis):
                 assert first[name] < current[name]
             else:
                 assert first[name] == current[name]
+
+
+def test_scroll(mainloop, opts):
+	"""
+	Check panscrolling works correctly
+	"""
+	dev = Device.from_name("PTH660", "Pen")
+	opts["Button2"] = "pan"
+	opts["PanScrollThreshold"] = 150
+	
+	prox_in = [
+			Sev("ABS_X", 50),
+			Sev("ABS_Y", 50),
+			Sev("BTN_TOOL_PEN", 1),
+			Sev("SYN_REPORT", 0),
+			]
+
+	prox_out = [
+			Sev("ABS_X", 50),
+			Sev("ABS_Y", 50),
+			Sev("BTN_TOOL_PEN", 0),
+			Sev("SYN_REPORT", 0),
+			]
+
+	monitor = Monitor.new_from_device(dev, opts)
+	monitor.write_events(prox_int)
+	monitor.write_events([Sev("BTN_STYLUS2", 1)]) # Press button2
+	monitor.write_events([Sev("BTN_STYLUS1", 1)]) # Pen touchdown
+	monitor.write_events([Sev("ABS_X", 200)]) # Move pen 150 points towards positive x
+	monitor.write_events([Sev("BTN_STYLUS1", 0)]) # Pen up
+	monitor.write_events([Sev("BTN_STYLUS2", 0)]) # Depress button2
+	monitor.write_events(prox_out)
+
+	mainloop.run()
+	logger.debug(f"We have some events: {monitor.events}")

@@ -342,7 +342,7 @@ wcmHotplugDevice(ClientPtr client, pointer closure )
  * @param type Type name for this tool
  * @param serial Serial number this device should be bound to (-1 for "any")
  */
-void wcmQueueHotplug(WacomDevicePtr priv, const char* name, const char *type, int serial)
+void wcmQueueHotplug(WacomDevicePtr priv, const char* name, const char *type, unsigned int serial)
 {
 	WacomHotplugInfo *hotplug_info;
 
@@ -853,7 +853,7 @@ static int wcmDevProc(DeviceIntPtr pWcm, int what)
 	Status rc = !Success;
 
 	DBG(2, priv, "BEGIN dev=%p priv=%p "
-			"type=%s flags=%d fd=%d what=%s\n",
+			"type=%s flags=%u fd=%d what=%s\n",
 			(void *)pWcm, (void *)priv,
 			pInfo->type_name,
 			priv->flags, pInfo ? pInfo->fd : -1,
@@ -953,6 +953,7 @@ static int preInit(InputDriverPtr drv, InputInfoPtr pInfo, int flags)
 	case WTYPE_CURSOR:	pInfo->type_name = WACOM_PROP_XI_TYPE_CURSOR; break;
 	case WTYPE_PAD:		pInfo->type_name = WACOM_PROP_XI_TYPE_PAD; break;
 	case WTYPE_TOUCH:	pInfo->type_name = WACOM_PROP_XI_TYPE_TOUCH; break;
+	case WTYPE_INVALID:
 	default:
 		xf86IDrvMsg(pInfo, X_ERROR,
 		       "No type or invalid type specified.\n"

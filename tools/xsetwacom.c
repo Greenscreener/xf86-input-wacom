@@ -91,7 +91,7 @@ typedef struct _param
 	const char *desc;	/* description */
 	const char *prop_name;	/* property name */
 	const int prop_format;	/* property format */
-	const int prop_offset;	/* offset (index) into the property values */
+	const unsigned int prop_offset;	/* offset (index) into the property values */
 	const int arg_count;   /* extra number of items after first one */
 	const unsigned int prop_flags;
 	void (*set_func)(Display *dpy, XDevice *dev, struct _param *param, int argc, char **argv); /* handler function, if appropriate */
@@ -792,7 +792,7 @@ static XDevice* find_device(Display *display, char *name)
 
 	for(i = 0; i < num_devices; i++)
 	{
-		TRACE("Checking device '%s' (%ld).\n", devices[i].name, devices[i].id);
+		TRACE("Checking device '%s' (%lu).\n", devices[i].name, devices[i].id);
 
 		if (((devices[i].use >= IsXExtensionDevice)) &&
 			((!is_id && strcmp(devices[i].name, name) == 0) ||
@@ -812,7 +812,7 @@ static XDevice* find_device(Display *display, char *name)
 
 	if (found)
 	{
-		TRACE("Device '%s' (%ld) found.\n", found->name, found->id);
+		TRACE("Device '%s' (%lu) found.\n", found->name, found->id);
 		dev = XOpenDevice(display, found->id);
 	}
 
@@ -849,7 +849,7 @@ static Bool test_property(Display *dpy, XDevice* dev, Atom prop)
 
 static void list_one_device(Display *dpy, XDeviceInfo *info)
 {
-	static int	wacom_prop = 0;
+	static unsigned int wacom_prop = 0;
 	int		natoms;
 	Atom		*atoms;
 	XDevice		*dev;
@@ -884,14 +884,14 @@ static void list_one_device(Display *dpy, XDeviceInfo *info)
 			if (nitems)
 			{
 				type_name = XGetAtomName(dpy, *(Atom*)data);
-				printf("%-32s	id: %ld	type: %-10s\n",
+				printf("%-32s	id: %lu	type: %-10s\n",
 						info->name, info->id,
 						type_name);
 			}
 
 			XFree(data);
 		} else {
-			TRACE("'%s' (%ld) is not a wacom device.\n", info->name, info->id);
+			TRACE("'%s' (%lu) is not a wacom device.\n", info->name, info->id);
 		}
 
 		XFree(atoms);
@@ -919,7 +919,7 @@ static void list_devices(Display *dpy)
 		if (info[i].use == IsXPointer || info[i].use == IsXKeyboard)
 			continue;
 
-		TRACE("Found device '%s' (%ld).\n", info[i].name, info[i].id);
+		TRACE("Found device '%s' (%lu).\n", info[i].name, info[i].id);
 		list_one_device(dpy, &info[i]);
 	}
 
@@ -942,11 +942,11 @@ static void list_mod(Display *dpy)
 {
 	struct modifier *m = modifiers;
 
-	printf("%zd modifiers are supported:\n", ARRAY_SIZE(modifiers) - 1);
+	printf("%zu modifiers are supported:\n", ARRAY_SIZE(modifiers) - 1);
 	while(m->name)
 		printf("	%s\n", m++->name);
 
-	printf("\n%zd specialkeys are supported:\n", ARRAY_SIZE(specialkeys) - 1);
+	printf("\n%zu specialkeys are supported:\n", ARRAY_SIZE(specialkeys) - 1);
 	m = specialkeys;
 	while(m->name)
 		printf("	%s\n", m++->name);
@@ -1300,7 +1300,7 @@ static int special_map_keystrokes(Display *dpy, int argc, char **argv, unsigned 
 		if (need_release)
 			data[*ndata + nitems++] = AC_KEY | kc;
 
-		TRACE("Key map %ld (%d, '%s') [%s,%s]\n", ks, kc,
+		TRACE("Key map %lu (%d, '%s') [%s,%s]\n", ks, kc,
 				XKeysymToString(ks),
 				need_press ?  "press" : "",
 				need_release ?  "release" : "");
@@ -1390,19 +1390,22 @@ static Bool parse_actions(Display *dpy, int argc, char **argv, unsigned long* da
 
 		while (keywords[j].keyword && i < nwords && *nitems < size)
 		{
-			int parsed = 0;
 			if (strcasecmp(words[i], keywords[j].keyword) == 0)
 			{
-				parsed = keywords[j].func(dpy, nwords - i - 1,
+				int parsed = keywords[j].func(dpy, nwords - i - 1,
 							  &words[i + 1],
 							  nitems, data, size);
 				i += parsed;
 				keyword_found = 1;
+
+				if (parsed)
+				{
+					/* restart with first keyword */
+					j = 0;
+					continue;
+				}
 			}
-			if (parsed)
-				j = parsed = 0; /* restart with first keyword */
-			else
-				j++;
+			j++;
 		}
 
 		if (!keyword_found)
@@ -1439,7 +1442,7 @@ static Bool parse_actions(Display *dpy, int argc, char **argv, unsigned long* da
  * @param  argc        Number of command line arguments we've been passed
  * @param  argv        Command line arguments we need to parse
  */
-static void special_map_property(Display *dpy, XDevice *dev, Atom btnact_prop, int offset, int argc, char **argv)
+static void special_map_property(Display *dpy, XDevice *dev, Atom btnact_prop, unsigned int offset, int argc, char **argv)
 {
 	unsigned long *data, *btnact_data;
 	Atom type, prop = 0;
@@ -1532,9 +1535,9 @@ out:
 static void map_actions(Display *dpy, XDevice *dev, param_t* param, int argc, char **argv)
 {
 	Atom action_prop;
-	int offset = param->prop_offset;
+	unsigned int offset = param->prop_offset;
 
-	TRACE("Mapping %s for device %ld.\n", param->name, dev->device_id);
+	TRACE("Mapping %s for device %lu.\n", param->name, dev->device_id);
 
 	action_prop = XInternAtom(dpy, param->prop_name, True);
 	if (!action_prop)
@@ -1551,7 +1554,7 @@ static void map_actions(Display *dpy, XDevice *dev, param_t* param, int argc, ch
 
 	if (strcmp(param->prop_name, WACOM_PROP_BUTTON_ACTIONS) == 0)
 	{
-		if (sscanf(argv[0], "%d", &offset) != 1 || offset <= 0)
+		if (sscanf(argv[0], "%u", &offset) != 1 || offset <= 0)
 		{
 			fprintf(stderr, "'%s' is not a valid button number.\n", argv[0]);
 			return;
@@ -1621,7 +1624,7 @@ static void set_mode(Display *dpy, XDevice *dev, param_t* param, int argc, char 
 		return;
 	}
 
-	TRACE("Set mode '%s' for device %ld.\n", argv[0], dev->device_id);
+	TRACE("Set mode '%s' for device %lu.\n", argv[0], dev->device_id);
 
 	if (strcasecmp(argv[0], "Relative") == 0)
 		mode = Relative;
@@ -1653,7 +1656,7 @@ static void set_rotate(Display *dpy, XDevice *dev, param_t* param, int argc, cha
 		return;
 	}
 
-	TRACE("Rotate '%s' for device %ld.\n", argv[0], dev->device_id);
+	TRACE("Rotate '%s' for device %lu.\n", argv[0], dev->device_id);
 
 	if (strcasecmp(argv[0], "cw") == 0 || strcasecmp(argv[0], "1") == 0)
 		rotation = 1;
@@ -1893,7 +1896,7 @@ static void get_mode(Display *dpy, XDevice *dev, param_t* param, int argc, char 
 		return;
 	}
 
-	TRACE("Getting mode for device %ld.\n", dev->device_id);
+	TRACE("Getting mode for device %lu.\n", dev->device_id);
 
 	v = (XValuatorInfoPtr)d->inputclassinfo;
 	for (i = 0; i < d->num_classes; i++)
@@ -1931,7 +1934,7 @@ static void get_rotate(Display *dpy, XDevice *dev, param_t* param, int argc, cha
 		return;
 	}
 
-	TRACE("Getting rotation for device %ld.\n", dev->device_id);
+	TRACE("Getting rotation for device %lu.\n", dev->device_id);
 
 	XGetDeviceProperty(dpy, dev, prop, 0, 1000, False, AnyPropertyType,
 				&type, &format, &nitems, &bytes_after, &data);
@@ -1978,12 +1981,11 @@ out:
  * @return       0 on failure, 1 otherwise
  */
 static int get_actions(Display *dpy, XDevice *dev,
-				  param_t *param, int offset)
+				  param_t *param, unsigned int offset)
 {
 	Atom prop, type;
 	int format;
 	unsigned long nitems, bytes_after, *data;
-	int i;
 	char buff[1024] = {0};
 	int last_type;
 
@@ -2015,7 +2017,7 @@ static int get_actions(Display *dpy, XDevice *dev,
 		   &bytes_after, (unsigned char**)&data);
 
 	last_type = 0;
-	for (i = 0; i < nitems; i++)
+	for (unsigned int i = 0; i < nitems; i++)
 	{
 		unsigned long action = data[i];
 		int current_type;
@@ -2085,7 +2087,7 @@ static int get_actions(Display *dpy, XDevice *dev,
  * @param offset Offset into the property specified in param
  * @return       0 on failure, 1 otherwise
  */
-static int get_button(Display *dpy, XDevice *dev, param_t *param, int offset)
+static int get_button(Display *dpy, XDevice *dev, param_t *param, unsigned int offset)
 {
 	Atom prop, type;
 	int format;
@@ -2115,7 +2117,7 @@ static int get_button(Display *dpy, XDevice *dev, param_t *param, int offset)
 		return 0;
 	}
 
-	print_button_value(param, offset, "%ld", prop);
+	print_button_value(param, offset, "%lu", prop);
 
 	return 1;
 }
@@ -2135,7 +2137,7 @@ static void get_map(Display *dpy, XDevice *dev, param_t *param, int argc, char**
 {
 	int offset = param->prop_offset;
 
-	TRACE("Getting button map for device %ld.\n", dev->device_id);
+	TRACE("Getting button map for device %lu.\n", dev->device_id);
 
 	if (argc != param->arg_count)
 	{
@@ -2260,8 +2262,9 @@ static Bool get_mapped_area(Display *dpy, XDevice *dev, int *width, int *height,
 
 	/* XI1 stores 32 bit properties (including float) as long,
 	 * regardless of architecture */
-	for (size_t i = 0; i < ARRAY_SIZE(matrix); i++)
+	for (size_t i = 0; i < ARRAY_SIZE(matrix); i++) {
 		matrix[i] = *(float*)(&data[i]);
+	}
 
 	TRACE("Current transformation matrix:\n");
 	TRACE("	[ %f %f %f ]\n", matrix[0], matrix[1], matrix[2]);
@@ -2310,8 +2313,10 @@ static Bool _set_matrix_prop(Display *dpy, XDevice *dev, const float fmatrix[9])
 
 	/* XI1 expects 32 bit properties (including float) as long,
 	 * regardless of architecture */
-	for (size_t i = 0; i < ARRAY_SIZE(matrix); i++)
+
+	for (size_t i = 0; i < ARRAY_SIZE(matrix); i++) {
 		*(float*)(matrix + i) = fmatrix[i];
+	}
 
 	XGetDeviceProperty(dpy, dev, matrix_prop, 0, 9, False,
 				AnyPropertyType, &type, &format, &nitems,
@@ -2702,7 +2707,7 @@ static void get_param(Display *dpy, XDevice *dev, param_t *param, int argc, char
 	}
 
 
-	TRACE("Getting property %ld, offset %d\n", prop, param->prop_offset);
+	TRACE("Getting property %lu, offset %u\n", prop, param->prop_offset);
 	XGetDeviceProperty(dpy, dev, prop, 0, 1000, False, AnyPropertyType,
 				&type, &format, &nitems, &bytes_after, &data);
 

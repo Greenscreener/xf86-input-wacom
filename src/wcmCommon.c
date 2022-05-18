@@ -239,12 +239,12 @@ int wcmReadPacket(WacomDevicePtr priv)
  *   previous one.
  ****************************************************************************/
 
-static void wcmSendButtons(WacomDevicePtr priv, const WacomDeviceState* ds, int buttons,
+static void wcmSendButtons(WacomDevicePtr priv, const WacomDeviceState* ds, unsigned int buttons,
 			   const WacomAxisData *axes)
 {
 	unsigned int button, mask, first_button;
 	WacomCommonPtr common = priv->common;
-	DBG(6, priv, "buttons=%d\n", buttons);
+	DBG(6, priv, "buttons=%u\n", buttons);
 
 	 /* button behaviour (TPC button on):
 		if only tip is pressed/released, send button 1 events
@@ -288,7 +288,7 @@ static void wcmSendKeys (WacomDevicePtr priv, unsigned int current, unsigned int
 {
 	unsigned int mask, idx;
 
-	DBG(6, priv, "current=%d previous=%d\n", current, previous);
+	DBG(6, priv, "current=%u previous=%u\n", current, previous);
 
 	for (idx = 0, mask = 0x1;
 	     mask && (mask <= current || mask <= previous);
@@ -601,7 +601,7 @@ static void sendWheelStripEvents(WacomDevicePtr priv, const WacomDeviceState* ds
 static void sendCommonEvents(WacomDevicePtr priv, const WacomDeviceState* ds,
 			     const WacomAxisData *axes)
 {
-	int buttons = ds->buttons;
+	unsigned int buttons = ds->buttons;
 	int x = 0, y = 0;
 
 	wcmAxisGet(axes, WACOM_AXIS_X, &x);
@@ -763,7 +763,7 @@ wcmSendNonPadEvents(WacomDevicePtr priv, const WacomDeviceState *ds,
 		if (wcmAxisGet(axes, WACOM_AXIS_RING, &val))
 			wcmAxisSet(axes, WACOM_AXIS_RING, val - priv->oldState.abswheel);
 		val = 0;
-		if (wcmAxisGet(axes, WACOM_AXIS_RING, &val))
+		if (wcmAxisGet(axes, WACOM_AXIS_RING2, &val))
 			wcmAxisSet(axes, WACOM_AXIS_RING2, val - priv->oldState.abswheel2);
 	}
 
@@ -841,7 +841,7 @@ void wcmSendEvents(WacomDevicePtr priv, const WacomDeviceState* ds)
 	{
 		DBG(10, priv, "serial number"
 				" is %u but your system configured %u",
-				serial, (int)priv->serial);
+				serial, priv->serial);
 		return;
 	}
 
@@ -899,7 +899,7 @@ void wcmSendEvents(WacomDevicePtr priv, const WacomDeviceState* ds)
 
 	wcmAxisDump(&axes, dump, sizeof(dump));
 	DBG(6, priv, "%s o_prox=%d\tprox=%d\t%s\tid=%d"
-		"\tserial=%u\tbutton=%s\tbuttons=%d\n",
+		"\tserial=%u\tbutton=%s\tbuttons=%u\n",
 		is_absolute(priv) ? "abs" : "rel", priv->oldState.proximity,
 		ds->proximity, dump, id, serial, is_button ? "true" : "false",
 		ds->buttons);
@@ -1010,7 +1010,7 @@ out:
 	}
 
 	DBG(10, common, "level = %d"
-		" return value = %d\n", suppress, returnV);
+		" return value = %u\n", suppress, returnV);
 	return returnV;
 }
 
@@ -1113,7 +1113,7 @@ void wcmEvent(WacomCommonPtr common, unsigned int channel,
 	WacomDevicePtr priv;
 	pChannel = common->wcmChannel + channel;
 
-	DBG(10, common, "channel = %d\n", channel);
+	DBG(10, common, "channel = %u\n", channel);
 
 	/* sanity check the channel */
 	if (channel >= MAX_CHANNELS)
@@ -1124,9 +1124,9 @@ void wcmEvent(WacomCommonPtr common, unsigned int channel,
 	ds = *pState;
 
 	DBG(10, common,
-		"c=%d i=0x%x t=0x%x s=0x%x x=%d y=%d b=%d "
+		"c=%u i=%d t=%d s=0x%x x=%d y=%d b=%u "
 		"p=%d rz=%d tx=%d ty=%d aw=%d aw2=%d rw=%d "
-		"t=%d px=%d st=%d cs=%d \n",
+		"t=%d px=%d st=%u cs=%d \n",
 		channel,
 		ds.device_id,
 		ds.device_type,
@@ -1154,7 +1154,7 @@ void wcmEvent(WacomCommonPtr common, unsigned int channel,
 		return;
 	}
 
-	DBG(11, common, "tool id=%d for %s\n", ds.device_type, priv->name);
+	DBG(11, common, "device_type=%d tool_id=%d for %s\n", ds.device_type, ds.device_id, priv->name);
 
 	if (TabletHasFeature(common, WCM_ROTATION) &&
 		TabletHasFeature(common, WCM_RING) &&
@@ -1339,7 +1339,7 @@ static void detectPressureIssue(WacomDevicePtr priv,
 		if (priv->oldMinPressure > pressureThreshold &&
 		    priv->eventCnt > MIN_EVENT_COUNT)
 			wcmLogSafe(priv, W_WARNING,
-				"On %s(%d) a base pressure of %d persists while the pen is in proximity.\n"
+				"On %s(%u) a base pressure of %d persists while the pen is in proximity.\n"
 				"\tThis is > %d percent of the maximum value (%d).\n"
 				"\tThis indicates a worn out pen, it is time to change your tool. Also see:\n"
 				"\thttps://github.com/linuxwacom/xf86-input-wacom/wiki/Pen-Wear.\n",
@@ -1558,10 +1558,10 @@ int wcmInitTablet(WacomDevicePtr priv)
 
 	/* Calculate default panscroll threshold if not set */
 	wcmLog(priv, W_CONFIG, "panscroll is %d\n", common->wcmPanscrollThreshold);
-	if (common->wcmPanscrollThreshold < 1) {
+	if (common->wcmPanscrollThreshold == 0) {
 		common->wcmPanscrollThreshold = common->wcmResolY * 13 / 1000; /* 13mm */
 	}
-	if (common->wcmPanscrollThreshold < 1) {
+	if (common->wcmPanscrollThreshold == 0) {
 		common->wcmPanscrollThreshold = 1000;
 	}
 	wcmLog(priv, W_CONFIG, "panscroll modified to %d\n", common->wcmPanscrollThreshold);
@@ -1696,7 +1696,7 @@ void wcmFreeCommon(WacomCommonPtr *ptr)
 		{
 			WacomToolPtr next;
 
-			DBG(10, common, "Free common serial: %d %s\n",
+			DBG(10, common, "Free common serial: %u %s\n",
 					common->serials->serial,
 					common->serials->name);
 
@@ -1752,9 +1752,8 @@ TEST_CASE(test_get_scroll_delta)
 		{128, 4, 256, AXIS_BITWISE,  5}, {4, 128, 256, AXIS_BITWISE, -5},
 		{256, 4, 256, AXIS_BITWISE, -4}, {4, 256, 256, AXIS_BITWISE,  4}
 	};
-	int i;
 
-	for (i = 0; i < ARRAY_SIZE(test_table); i++)
+	for (size_t i = 0; i < ARRAY_SIZE(test_table); i++)
 	{
 		int delta;
 		int current, old, wrap, flags;
@@ -1867,7 +1866,7 @@ TEST_CASE(test_normalize_pressure)
 	WacomDeviceRec priv = {0};
 	WacomCommonRec common = {0};
 	int normalized_max = 65536;
-	int pressure, prev_pressure = -1;
+	int pressure = 0, prev_pressure = -1;
 	int i, j, k;
 
 	priv.common = &common;

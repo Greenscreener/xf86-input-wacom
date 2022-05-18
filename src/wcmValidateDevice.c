@@ -142,7 +142,7 @@ static struct
 Bool wcmIsAValidType(WacomDevicePtr priv, const char* type)
 {
 	WacomCommonPtr common = priv->common;
-	int i, j;
+	size_t i, j;
 	char* dsource;
 	Bool user_defined;
 
@@ -441,12 +441,12 @@ wcmAddHotpluggedDevice(WacomDevicePtr priv, const char *basename, const char *ty
 	else if (strlen(ser->name) > 0)
 		rc = asprintf(&name, "%s %s %s", basename, ser->name, type);
 	else
-		rc = asprintf(&name, "%s %d %s", basename, ser->serial, type);
+		rc = asprintf(&name, "%s %u %s", basename, ser->serial, type);
 
 	if (rc == -1)
 		return;
 
-	wcmQueueHotplug(priv, name, type, ser ? ser->serial : -1);
+	wcmQueueHotplug(priv, name, type, ser ? ser->serial : UINT_MAX);
 
 	free(name);
 }
@@ -493,7 +493,7 @@ static void wcmHotplugSerials(WacomDevicePtr priv, const char *basename)
 
 	while (ser)
 	{
-		wcmLog(priv, W_INFO, "hotplugging serial %d.\n", ser->serial);
+		wcmLog(priv, W_INFO, "hotplugging serial %u.\n", ser->serial);
 		wcmTryHotplugSerialType(priv, ser, basename, STYLUS_ID, "stylus");
 		wcmTryHotplugSerialType(priv, ser, basename, ERASER_ID, "eraser");
 		wcmTryHotplugSerialType(priv, ser, basename, CURSOR_ID, "cursor");
@@ -504,18 +504,18 @@ static void wcmHotplugSerials(WacomDevicePtr priv, const char *basename)
 
 void wcmHotplugOthers(WacomDevicePtr priv, const char *basename)
 {
-	int i, skip = 1;
+	Bool skip = TRUE;
 
 	wcmLog(priv, W_INFO, "hotplugging dependent devices.\n");
 
         /* same loop is used to init the first device, if we get here we
          * need to start at the second one */
-	for (i = 0; i < ARRAY_SIZE(wcmType); i++)
+	for (size_t i = 0; i < ARRAY_SIZE(wcmType); i++)
 	{
 		if (wcmIsAValidType(priv, wcmType[i].type))
 		{
 			if (skip)
-				skip = 0;
+				skip = FALSE;
 			else
 				wcmAddHotpluggedDevice(priv, basename, wcmType[i].type, NULL);
 		}
@@ -523,7 +523,7 @@ void wcmHotplugOthers(WacomDevicePtr priv, const char *basename)
 
 	wcmHotplugSerials(priv, basename);
 
-        wcmLog(priv, W_INFO, "hotplugging completed.\n");
+	wcmLog(priv, W_INFO, "hotplugging completed.\n");
 }
 
 /**
@@ -538,7 +538,6 @@ void wcmHotplugOthers(WacomDevicePtr priv, const char *basename)
 int wcmNeedAutoHotplug(WacomDevicePtr priv, char **type)
 {
 	char *source = wcmOptCheckStr(priv, "_source", NULL);
-	int i;
 	int rc = 0;
 
 	if (*type) /* type specified, don't hotplug */
@@ -552,7 +551,7 @@ int wcmNeedAutoHotplug(WacomDevicePtr priv, char **type)
 
 	/* no type specified, so we need to pick the first one applicable
 	 * for our device */
-	for (i = 0; i < ARRAY_SIZE(wcmType); i++)
+	for (size_t i = 0; i < ARRAY_SIZE(wcmType); i++)
 	{
 		if (wcmIsAValidType(priv, wcmType[i].type))
 		{
@@ -822,11 +821,12 @@ Bool wcmPreInitParseOptions(WacomDevicePtr priv, Bool is_primary,
 		if(toollist) /* Already have a tool with the same type/serial */
 		{
 			wcmLog(priv, W_ERROR,
-				    "already have a tool with type/serial %d/%d.\n",
+				    "already have a tool with type/serial %d/%u.\n",
 				    tool->typeid, tool->serial);
 			goto error;
 		} else /* No match on existing tool/serial, add tool to the end of the list */
 		{
+			assert(common->wcmTool != NULL);
 			toollist = common->wcmTool;
 			while(toollist->next)
 				toollist = toollist->next;
@@ -909,7 +909,7 @@ Bool wcmPreInitParseOptions(WacomDevicePtr priv, Bool is_primary,
 
 	for (i=0; i<WCM_MAX_BUTTONS; i++)
 	{
-		char b[12];
+		char b[20];
 		sprintf(b, "Button%d", i+1);
 		priv->button_default[i] = wcmOptGetInt(priv, b, priv->button_default[i]);
 	}

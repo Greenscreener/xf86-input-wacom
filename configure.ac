@@ -24,7 +24,7 @@
 AC_PREREQ([2.60])
 # bump version in meson.build
 AC_INIT([xf86-input-wacom],
-        [0.99.3],
+        [1.0.0],
         [https://github.com/linuxwacom/xf86-input-wacom/issues/],
         [xf86-input-wacom])
 AC_CONFIG_MACRO_DIR([m4])
@@ -38,9 +38,46 @@ AC_USE_SYSTEM_EXTENSIONS
 
 AC_PROG_CC_STDC
 
+m4_include([m4/ax_check_compile_flag.m4])
+
 # Initialize libtool
 AC_DISABLE_STATIC
 AC_PROG_LIBTOOL
+
+# -----------------------------------------------------------------------------
+#                      Compiler Flags / Libraries
+# -----------------------------------------------------------------------------
+m4_define(COMPILER_FLAGS, [
+          -Wall
+          -Wextra
+          -Wno-unused-parameter
+          -Wmissing-prototypes
+          -Wstrict-prototypes
+          -Wlogical-op
+          -Wpointer-arith
+          -Wuninitialized
+          -Winit-self
+          -Wstrict-prototypes
+          -Wimplicit-fallthrough
+          -Wredundant-decls
+          -Wincompatible-pointer-types
+          -Wformat=2
+          -Wformat-overflow=2
+          -Wformat-signedness
+          -Wformat-truncation=2
+          -Wmissing-declarations
+          -Wshift-overflow=2
+          -Wstrict-overflow=2
+          -Wswitch-enum
+
+          -fvisibility=hidden
+])
+m4_foreach_w([_flag], COMPILER_FLAGS, [
+    AX_CHECK_COMPILE_FLAG(_flag, AVAILABLE_FLAGS="$AVAILABLE_FLAGS _flag", [], [-Werror])
+])
+AM_CFLAGS="$AM_CFLAGS $AVAILABLE_FLAGS"
+AM_CFLAGS="$AM_CFLAGS -D_GNU_SOURCE"
+AC_SUBST(AM_CFLAGS)
 
 # Initialize X.Org macros 1.8 or later for MAN_SUBSTS set by XORG_MANPAGE_SECTIONS
 m4_ifndef([XORG_MACROS_VERSION],
@@ -134,26 +171,18 @@ AC_ARG_ENABLE(unit-tests, AS_HELP_STRING([--enable-unit-tests],
                           [UNITTESTS=$enableval],
                           [UNITTESTS=auto])
 
-# If unittests aren't explicitly disabled, check for required support
-if test "x$UNITTESTS" != xno ; then
-       # Check for the availability of dlsym and friends
-       AC_CHECK_LIB([dl], [dlsym],
-           [libdl_available="yes"],
-           [libdl_available="no"]
-       )
+# Check for the availability of dlsym and friends
+AC_CHECK_LIB([dl], [dlsym],
+    [libdl_available="yes"],
+    [libdl_available="no"]
+)
+
+# If unittests aren't explicitly enabled, check for required support
+if test "x$UNITTESTS" = xauto; then
+    UNITTESTS=$libdl_available
 fi
 
-if test "x$UNITTESTS" = xauto; then
-       if test "x$linker_can_wrap" = xyes; then
-           UNITTESTS=yes
-       else
-           UNITTESTS=no
-       fi
-fi
 if test "x$UNITTESTS" = xyes; then
-       if test "x$linker_can_wrap" = xno; then
-           AC_MSG_ERROR([ld -wrap support required to build unit tests])
-       fi
        if test "x$libdl_available" = xno; then
            AC_MSG_ERROR([dlsym required to build unit tests])
        fi

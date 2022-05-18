@@ -58,9 +58,9 @@ enum WacomAxisType {
 	WACOM_AXIS_TILT_Y	= (1 << 4),
 	WACOM_AXIS_STRIP_X	= (1 << 5),
 	WACOM_AXIS_STRIP_Y	= (1 << 6),
-	WACOM_AXIS_ROTATION	= (1 << 7),
+	WACOM_AXIS_ROTATION	= (1 << 7), /* Cursor rotation only */
 	WACOM_AXIS_THROTTLE	= (1 << 8),
-	WACOM_AXIS_WHEEL	= (1 << 9),
+	WACOM_AXIS_WHEEL	= (1 << 9), /* Artpen rotation or airbrush wheel */
 	WACOM_AXIS_RING		= (1 << 10),
 	WACOM_AXIS_RING2	= (1 << 11),
 	WACOM_AXIS_SCROLL_X	= (1 << 12),
@@ -205,12 +205,15 @@ static inline void wcmAxisValue(const WacomAxisData *data,
 			       char *buf, size_t len)
 {
 	int val = 0;
+	int rc;
 
 	if (!wcmAxisGet(data, which, &val)) {
-		assert(snprintf(buf, len, "N/A") < len);
+		rc = snprintf(buf, len, "N/A");
+		assert(rc > 0 && (size_t)rc < len);
 		return;
 	}
-	assert(snprintf(buf, len, "%d", val) < len);
+	rc = snprintf(buf, len, "%d", val);
+	assert(rc > 0 && (size_t)rc < len);
 }
 
 static inline const char* wcmAxisName(enum WacomAxisType which)
@@ -239,21 +242,23 @@ static inline void wcmAxisDump(const WacomAxisData *data, char *buf, size_t len)
 {
 	uint32_t mask = data->mask;
 	const char *prefix = "";
-	size_t count = 0;
 
 	assert(len > 0);
 	buf[0] = '\0';
 	for (uint32_t flag = 0x1; flag <= _WACOM_AXIS_LAST; flag <<= 1) {
 		const char *name = wcmAxisName(flag);
 		char value[32];
+		int rc;
 
 		if ((mask & flag) == 0)
 			continue;
 
-		wcmAxisValue(data, flag, value, sizeof(data));
+		wcmAxisValue(data, flag, value, sizeof(value));
 
-		count += snprintf(buf + count, len - count, "%s%s: %s", prefix, name, value);
-		assert(count < len);
+		rc = snprintf(buf, len, "%s%s: %s", prefix, name, value);
+		assert(rc > 0 && (size_t)rc < len);
+		buf += rc;
+		len -= rc;
 		prefix = ", ";
 	}
 }
@@ -285,7 +290,7 @@ void wcmNotifyEvdev(WacomDevicePtr priv, const struct input_event *event);
  * frontend is idle later.
  */
 void wcmQueueHotplug(WacomDevicePtr priv, const char *name,
-		     const char *type, int serial);
+		     const char *type, unsigned int serial);
 
 /* X server interface emulations */
 

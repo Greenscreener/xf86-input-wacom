@@ -153,8 +153,12 @@ wcmSetFlags(WacomDevicePtr priv, WacomType type)
 		case WTYPE_PAD:
 			flags = ABSOLUTE_FLAG|PAD_ID;
 			break;
+		case WTYPE_INVALID:
 		default:
-			goto invalid;
+			wcmLog(priv, W_ERROR,
+			    "No type or invalid type specified.\n"
+			    "Must be one of stylus, touch, cursor, eraser, or pad\n");
+			return FALSE;
 	}
 
 	priv->flags = flags;
@@ -168,13 +172,6 @@ wcmSetFlags(WacomDevicePtr priv, WacomType type)
 	priv->tool->typeid = DEVICE_ID(flags); /* tool type (stylus/touch/eraser/cursor/pad) */
 
 	return TRUE;
-
-invalid:
-	wcmLog(priv, W_ERROR,
-		    "No type or invalid type specified.\n"
-		    "Must be one of stylus, touch, cursor, eraser, or pad\n");
-
-	return FALSE;
 }
 
 int wcmGetPhyDeviceID(WacomDevicePtr priv)
@@ -1009,7 +1006,7 @@ Bool wcmDevInit(WacomDevicePtr priv)
 	nbbuttons = min(max(nbbuttons + 4, 7), WCM_MAX_BUTTONS);
 
 	DBG(10, priv,
-		"(type %d) %d buttons, %d axes\n",
+		"(type %u) %d buttons, %d axes\n",
 		priv->type, nbbuttons, nbaxes);
 
 	if (!wcmInitButtons(priv, nbbuttons))
@@ -1229,12 +1226,11 @@ TEST_CASE(test_set_type)
 
 TEST_CASE(test_flag_set)
 {
-	int i;
 	unsigned int flags = 0;
 
-	for (i = 0; i < sizeof(flags); i++)
+	for (size_t i = 0; i < sizeof(flags); i++)
 	{
-		int mask = 1 << i;
+		unsigned int mask = 1 << i;
 		flags = 0;
 
 		assert(!MaskIsSet(flags, mask));

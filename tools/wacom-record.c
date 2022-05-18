@@ -44,7 +44,7 @@ static GOptionEntry opts[] =
 	{ "options", 0, 0, G_OPTION_ARG_STRING, &driver_options, "Driver options in the form \"Foo=bar,Baz=bat\"", NULL },
 	{ "grab", 0, 0, G_OPTION_ARG_NONE, &grab_device, "Grab the device while recording", NULL },
 	{ "evdev", 0, 0, G_OPTION_ARG_NONE, &log_evdev, "Log evdev events", NULL },
-	{ NULL },
+	{ 0 },
 };
 
 static void log_message(WacomDevice *device, const char *type, const char *message)
@@ -102,7 +102,7 @@ static inline void print_axes(const WacomEventData *data)
 
 static void proximity(WacomDevice *device, gboolean is_prox_in, WacomEventData *data)
 {
-	printf("    - source: %d\n"
+	printf("    - source: %u\n"
 	       "      event: proximity\n"
 	       "      proximity-in: %s\n",
 	       wacom_device_get_id(device), strbool(is_prox_in));
@@ -111,7 +111,7 @@ static void proximity(WacomDevice *device, gboolean is_prox_in, WacomEventData *
 
 static void motion(WacomDevice *device, gboolean is_absolute, WacomEventData *data)
 {
-	printf("    - source: %d\n"
+	printf("    - source: %u\n"
 	       "      mode: %s\n"
 	       "      event: motion\n",
 	       wacom_device_get_id(device),
@@ -122,7 +122,7 @@ static void motion(WacomDevice *device, gboolean is_absolute, WacomEventData *da
 static void button(WacomDevice *device, gboolean is_absolute, int button,
 		   gboolean is_press, WacomEventData *data)
 {
-	printf("    - source: %d\n"
+	printf("    - source: %u\n"
 	       "      event: button\n"
 	       "      button: %d\n"
 	       "      is-press: %s\n",
@@ -132,7 +132,7 @@ static void button(WacomDevice *device, gboolean is_absolute, int button,
 
 static void key(WacomDevice *device, gboolean keycode, gboolean is_press)
 {
-	printf("    - source: %d\n"
+	printf("    - source: %u\n"
 	       "      event: key\n"
 	       "      key: %d\n"
 	       "      is-press: %s\n", wacom_device_get_id(device),
@@ -141,7 +141,7 @@ static void key(WacomDevice *device, gboolean keycode, gboolean is_press)
 
 static void evdev(WacomDevice *device, const struct input_event *evdev)
 {
-	printf("    - { source: %d, event: evdev, data: [%6ld, %6ld, %3d, %3d, %10d] } # %s / %-20s %5d\n",
+	printf("    - { source: %u, event: evdev, data: [%6ld, %6ld, %3d, %3d, %10d] } # %s / %-20s %5d\n",
 	       wacom_device_get_id(device),
 	       evdev->input_event_sec,
 	       evdev->input_event_usec,
@@ -159,7 +159,7 @@ static void device_added(WacomDriver *driver, WacomDevice *device)
 	WacomOptions *options = wacom_device_get_options(device);
 	GSList *opts = wacom_options_list_keys(options);
 
-	printf("    - source: %d\n"
+	printf("    - source: %u\n"
 	       "      event: new-device\n"
 	       "      name: \"%s\"\n",
 	       wacom_device_get_id(device), wacom_device_get_name(device));
@@ -248,7 +248,7 @@ static void device_added(WacomDriver *driver, WacomDevice *device)
 
 static void device_removed(WacomDriver *driver, WacomDevice *device)
 {
-	printf("    - source: %d\n"
+	printf("    - source: %u\n"
 	       "      event: removed-device\n"
 	       "      name: \"%s\"\n",
 	       wacom_device_get_id(device), wacom_device_get_name(device));
@@ -302,7 +302,7 @@ static char *get_device_name(const char *path)
 	struct udev *udev;
 	struct udev_device *dev, *parent;
 	g_autofree char *basename = g_path_get_basename(path);
-	g_autofree char *syspath;
+	g_autofree char *syspath = NULL;
 	char *name = NULL;
 
 	udev = udev_new();
@@ -368,7 +368,7 @@ int main(int argc, char **argv)
 	if (grab_device)
 		wacom_options_set(options, "Grab", "true");
 	if (debug_level) {
-		g_autofree char *lvl = g_strdup_printf("%d", debug_level);
+		g_autofree char *lvl = g_strdup_printf("%u", debug_level);
 		wacom_options_set(options, "DebugLevel", lvl);
 		wacom_options_set(options, "CommonDBG", lvl);
 	}

@@ -386,7 +386,7 @@ static int wcmCheckActionProperty(WacomDevicePtr priv, Atom property, XIProperty
 	}
 
 	if (prop->type != XA_INTEGER) {
-		DBG(3, priv, "ERROR: Incorrect value type (%d != XA_INTEGER)\n", prop->type);
+		DBG(3, priv, "ERROR: Incorrect value type (%u != XA_INTEGER)\n", prop->type);
 		return BadMatch;
 	}
 
@@ -397,7 +397,7 @@ static int wcmCheckActionProperty(WacomDevicePtr priv, Atom property, XIProperty
 		int code = data[j] & AC_CODE;
 		int type = data[j] & AC_TYPE;
 
-		DBG(10, priv, "Index %d == %d (type: %d, code: %d)\n", j, data[j], type, code);
+		DBG(10, priv, "Index %d == %u (type: %d, code: %d)\n", j, data[j], type, code);
 
 		switch(type)
 		{
@@ -443,7 +443,7 @@ static int wcmSetActionProperty(DeviceIntPtr dev, Atom property,
 	WacomDevicePtr priv = (WacomDevicePtr) pInfo->private;
 	int rc, i;
 
-	DBG(5, priv, "%s new actions for Atom %d\n", checkonly ? "Checking" : "Setting", property);
+	DBG(5, priv, "%s new actions for Atom %u\n", checkonly ? "Checking" : "Setting", property);
 
 	rc = wcmCheckActionProperty(priv, property, prop);
 	if (rc != Success) {
@@ -560,9 +560,6 @@ static int wcmSetActionsProperty(DeviceIntPtr dev, Atom property,
 					wcmResetWheelAction(priv, index);
 					wcmInitWheelActionProp(priv, index);
 				}
-
-				if (subproperty != handlers[index])
-					subproperty = handlers[index];
 			}
 		}
 		else
@@ -791,7 +788,7 @@ static int wcmSetProperty(DeviceIntPtr dev, Atom property, XIPropertyValuePtr pr
 		return wcmSetActionsProperty(dev, property, prop, checkonly, ARRAY_SIZE(priv->wheel_action_props), priv->wheel_action_props, priv->wheel_actions);
 	else if (property == prop_proxout)
 	{
-		CARD32 value;
+		INT32 value;
 
 		if (prop->size != 1 || prop->format != 32)
 			return BadValue;
@@ -799,9 +796,9 @@ static int wcmSetProperty(DeviceIntPtr dev, Atom property, XIPropertyValuePtr pr
 		if (!IsTablet (priv))
 			return BadValue;
 
-		value = *(CARD32*)prop->data;
+		value = *(INT32*)prop->data;
 
-		if (value > common->wcmMaxDist)
+		if (value > common->wcmMaxDist || value < 0)
 			return BadValue;
 
 		if (!checkonly)
@@ -934,16 +931,21 @@ static int wcmSetProperty(DeviceIntPtr dev, Atom property, XIPropertyValuePtr pr
 			common->wcmPressureRecalibration = values[0];
 	} else if (property == prop_panscroll_threshold)
 	{
-		CARD32 *values = (CARD32*)prop->data;
+		INT32 *values = (INT32*)prop->data;
 
 		if (prop->size != 1 || prop->format != 32)
 			return BadValue;
 
-		if (values[0] <= 0)
-			return BadValue;
-
 		if (IsTouch(priv))
 			return BadMatch;
+
+		/* Reset to default if set to 0 */
+		if (values[0] == 0) {
+			values[0] = common->wcmResolY * 13 / 1000; /* 13mm */
+		}
+		if (values[0] == 0) {
+			values[0] = 1000;
+		}
 
 		if (!checkonly)
 			common->wcmPanscrollThreshold = values[0];
@@ -977,7 +979,7 @@ static int wcmGetProperty (DeviceIntPtr dev, Atom property)
 		values[3] = priv->cur_serial;
 		values[4] = priv->cur_device_id;
 
-		DBG(10, priv, "Update to serial: %d\n", priv->oldState.serial_num);
+		DBG(10, priv, "Update to serial: %u\n", priv->oldState.serial_num);
 
 		return XIChangeDeviceProperty(dev, property, XA_INTEGER, 32,
 					      PropModeReplace, 5,

@@ -60,6 +60,8 @@
 #define PROXOUT_INTUOS_DISTANCE		10
 #define PROXOUT_GRAPHIRE_DISTANCE	42
 
+#define DEFAULT_TOOL_SERIAL UINT_MAX
+
 /* 4.15 */
 
 #ifndef BTN_STYLUS3
@@ -90,7 +92,7 @@ struct _WacomModel
 	int (*Initialize)(WacomDevicePtr priv);
 	int (*DetectConfig)(WacomDevicePtr priv);
 	int (*Start)(WacomDevicePtr priv);
-	int (*Parse)(WacomDevicePtr priv, const unsigned char* data, int len);
+	int (*Parse)(WacomDevicePtr priv, const unsigned char* data, unsigned long len);
 };
 
 /******************************************************************************
@@ -190,7 +192,7 @@ struct _WacomDeviceState
 	unsigned int serial_num;
 	int x;
 	int y;
-	int buttons;
+	unsigned int buttons;
 	int pressure;
 	int tiltx;
 	int tilty;
@@ -203,8 +205,8 @@ struct _WacomDeviceState
 	int distance;
 	int throttle;
 	int proximity;
-	int sample;	/* wraps every 24 days */
-	int time;
+	unsigned int sample;	/* wraps every 24 days */
+	unsigned int time;
 	unsigned int keys; /* bitmask for IDX_KEY_CONTROLPANEL, etc. */
 };
 
@@ -363,11 +365,11 @@ extern WacomHWClass *WacomGetClassUSB(void);
 #define PAD_CHANNEL (MAX_CHANNELS-1)
 
 typedef struct {
-	int wcmZoomDistance;	       /* minimum distance for a zoom touch gesture */
-	int wcmScrollDistance;	       /* minimum motion before sending a scroll gesture */
-	int wcmScrollDirection;	       /* store the vertical or horizontal bit in use */
-	int wcmGestureUsed;	       /* retain used gesture count within one in-prox event */
-	int wcmTapTime;	   	       /* minimum time between taps for a right click */
+	unsigned int wcmZoomDistance;        /* minimum distance for a zoom touch gesture */
+	unsigned int wcmScrollDistance;      /* minimum motion before sending a scroll gesture */
+	unsigned int wcmScrollDirection;     /* store the vertical or horizontal bit in use */
+	unsigned int wcmGestureUsed;         /* retain used gesture count within one in-prox event */
+	unsigned int wcmTapTime;             /* minimum time between taps for a right click */
 } WacomGesturesParameters;
 
 enum WacomProtocol {

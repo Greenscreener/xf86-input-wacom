@@ -44,6 +44,7 @@ logger = logging.getLogger(__name__)
 
 class PenId(enum.IntEnum):
     ARTPEN = 0x100804
+    CINTIQ_13_PEN = 0x16802
 
 
 @attr.s
@@ -143,7 +144,7 @@ class Device:
 @attr.s
 class UinputDevice:
     """
-    A warpper around a uinput device.
+    A wrapper around a uinput device.
     """
 
     uidev: libevdev.Device = attr.ib()
@@ -233,6 +234,7 @@ class Monitor:
             pytest.skip("Insufficient permissions to open event node")
 
         opts["Device"] = uidev.devnode
+        opts["_testdevice"] = "true"
         wacom_options = wacom.Options()
         for name, value in opts.items():
             wacom_options.set(name, value)

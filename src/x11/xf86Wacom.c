@@ -1000,6 +1000,140 @@ _X_EXPORT XF86ModuleData wacomModuleData =
 #ifdef ENABLE_TESTS
 #include "wacom-test-suite.h"
 
+#define MAX_VALUATORS 36
+
+struct _ValuatorMask {
+	int8_t last_bit;            /* highest bit set in mask */
+	int8_t has_unaccelerated;
+	uint8_t mask[(MAX_VALUATORS + 7) / 8];
+	double valuators[MAX_VALUATORS];    /* valuator data */
+	double unaccelerated[MAX_VALUATORS];    /* valuator data */
+};
+
+typedef struct _ValuatorMask ValuatorMask;
+
+// The following functions are copied from https://gitlab.freedesktop.org/xorg/xserver/-/blob/master/dix/inpututils.c
+
+int
+CountBits(const uint8_t * mask, int len)
+{
+	int i;
+	int ret = 0;
+
+	for (i = 0; i < len; i++)
+		if (BitIsOn(mask, i))
+			ret++;
+
+	return ret;
+}
+
+
+/**
+ * Alloc a valuator mask large enough for num_valuators.
+ */
+ValuatorMask *
+valuator_mask_new(int num_valuators)
+{
+	/* alloc a fixed size mask for now and ignore num_valuators. in the
+	 * flying-car future, when we can dynamically alloc the masks and are
+	 * not constrained by signals, we can start using num_valuators */
+	ValuatorMask *mask = calloc(1, sizeof(ValuatorMask));
+
+	if (mask == NULL)
+		return NULL;
+
+	mask->last_bit = -1;
+	return mask;
+}
+
+/**
+ * Reset mask to zero.
+ */
+void
+valuator_mask_zero(ValuatorMask *mask)
+{
+	memset(mask, 0, sizeof(*mask));
+	mask->last_bit = -1;
+}
+
+/**
+ * Returns the current size of the mask (i.e. the highest number of
+ * valuators currently set + 1).
+ */
+int
+valuator_mask_size(const ValuatorMask *mask)
+{
+	return mask->last_bit + 1;
+}
+
+/**
+ * Returns the number of valuators set in the given mask.
+ */
+int
+valuator_mask_num_valuators(const ValuatorMask *mask)
+{
+	return CountBits(mask->mask, min(mask->last_bit + 1, MAX_VALUATORS));
+}
+
+/**
+ * Return true if the valuator is set in the mask, or false otherwise.
+ */
+int
+valuator_mask_isset(const ValuatorMask *mask, int valuator)
+{
+	return mask->last_bit >= valuator && BitIsOn(mask->mask, valuator);
+}
+
+static inline void
+_valuator_mask_set_double(ValuatorMask *mask, int valuator, double data)
+{
+	mask->last_bit = max(valuator, mask->last_bit);
+	SetBit(mask->mask, valuator);
+	mask->valuators[valuator] = data;
+}
+
+/**
+ * Set the valuator to the given floating-point data.
+ */
+void
+valuator_mask_set_double(ValuatorMask *mask, int valuator, double data)
+{
+	BUG_WARN_MSG(mask->has_unaccelerated,
+			"Do not mix valuator types, zero mask first\n");
+	_valuator_mask_set_double(mask, valuator, data);
+}
+
+/**
+ * Set the valuator to the given integer data.
+ */
+void
+valuator_mask_set(ValuatorMask *mask, int valuator, int data)
+{
+	valuator_mask_set_double(mask, valuator, data);
+}
+
+/**
+ * Return the requested valuator value as a double. If the mask bit is not
+ * set for the given valuator, the returned value is undefined.
+ */
+	double
+valuator_mask_get_double(const ValuatorMask *mask, int valuator)
+{
+	return mask->valuators[valuator];
+}
+
+/**
+ * Return the requested valuator value as an integer, rounding towards zero.
+ * If the mask bit is not set for the given valuator, the returned value is
+ * undefined.
+ */
+int
+valuator_mask_get(const ValuatorMask *mask, int valuator)
+{
+	return trunc(valuator_mask_get_double(mask, valuator));
+}
+
+
 TEST_CASE(test_convert_axes)
 {
 	WacomAxisData axes = {0};
@@ -1007,7 +1141,7 @@ TEST_CASE(test_convert_axes)
 
 	convertAxesM(&axes, mask);
 	assert(valuator_mask_num_valuators(mask) == 0);
-	assert(valuator_mask_size(mask) == 1);
+	assert(valuator_mask_size(mask) == 0);
 	for (size_t i = 0; i< 9; i++)
 		assert(!valuator_mask_isset(mask, i));
 
@@ -1039,7 +1173,7 @@ TEST_CASE(test_convert_axes)
 
  	convertAxesM(&axes, mask);
 	assert(valuator_mask_num_valuators(mask) == 2);
-	assert(valuator_mask_size(mask) == 6);
+	assert(valuator_mask_size(mask) == 8);
 	assert(!valuator_mask_isset(mask, 0));
 	assert(!valuator_mask_isset(mask, 1));
 	assert(valuator_mask_isset(mask, 2));

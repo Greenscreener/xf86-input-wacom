@@ -371,7 +371,7 @@ void wcmEmitKeycode(WacomDevicePtr priv, int keycode, int state)
 }
 
 static inline void
-convertAxesM(const WacomAxisData *axes, ValuatorMask *mask) {
+convertAxes(const WacomAxisData *axes, ValuatorMask *mask) {
 
 
 	for (enum WacomAxisType which = _WACOM_AXIS_LAST; which > 0; which >>= 1)
@@ -414,7 +414,7 @@ void wcmEmitProximity(WacomDevicePtr priv, bool is_proximity_in,
 	InputInfoPtr pInfo = priv->frontend;
 	
 	ValuatorMask *mask = valuator_mask_new(9);
-	convertAxesM(axes, mask);
+	convertAxes(axes, mask);
 	
 	xf86PostProximityEventM(pInfo->dev, is_proximity_in, mask);
 }
@@ -424,7 +424,7 @@ void wcmEmitMotion(WacomDevicePtr priv, bool is_absolute, const WacomAxisData *a
 	InputInfoPtr pInfo = priv->frontend;
 	
 	ValuatorMask *mask = valuator_mask_new(9);
-	convertAxesM(axes, mask);
+	convertAxes(axes, mask);
 
 	xf86PostMotionEventM(pInfo->dev, is_absolute, mask);
 }
@@ -434,7 +434,7 @@ void wcmEmitButton(WacomDevicePtr priv, bool is_absolute, int button, bool is_pr
 	InputInfoPtr pInfo = priv->frontend;
 
 	ValuatorMask *mask = valuator_mask_new(9);
-	convertAxesM(axes, mask);
+	convertAxes(axes, mask);
 
 
 	xf86PostButtonEventM(pInfo->dev, is_absolute, button, is_press, mask);
@@ -1139,7 +1139,7 @@ TEST_CASE(test_convert_axes)
 	WacomAxisData axes = {0};
 	ValuatorMask *mask = valuator_mask_new(9);
 
-	convertAxesM(&axes, mask);
+	convertAxes(&axes, mask);
 	assert(valuator_mask_num_valuators(mask) == 0);
 	assert(valuator_mask_size(mask) == 0);
 	for (size_t i = 0; i< 9; i++)
@@ -1150,7 +1150,7 @@ TEST_CASE(test_convert_axes)
 
 	/* Check conversion for single value with first_valuator != 0 */
 	wcmAxisSet(&axes, WACOM_AXIS_PRESSURE, 1); /* pos 2 */
-	convertAxesM(&axes, mask);
+	convertAxes(&axes, mask);
 	assert(valuator_mask_num_valuators(mask) == 1);
 	assert(valuator_mask_size(mask) == 3);
 	assert(!valuator_mask_isset(mask, 0));
@@ -1171,7 +1171,7 @@ TEST_CASE(test_convert_axes)
 	wcmAxisSet(&axes, WACOM_AXIS_PRESSURE, 1); /* pos 2 */
 	wcmAxisSet(&axes, WACOM_AXIS_WHEEL, 2); /* pos 7 */
 
- 	convertAxesM(&axes, mask);
+ 	convertAxes(&axes, mask);
 	assert(valuator_mask_num_valuators(mask) == 2);
 	assert(valuator_mask_size(mask) == 8);
 	assert(!valuator_mask_isset(mask, 0));
@@ -1190,7 +1190,7 @@ TEST_CASE(test_convert_axes)
 	valuator_mask_zero(mask);
 
 	/* Check conversion for valuators with duplicate uses. Note that this
-	 * test is implementation-dependent: the loop in convertAxesM decides
+	 * test is implementation-dependent: the loop in convertAxes decides
 	 */
 	wcmAxisSet(&axes, WACOM_AXIS_PRESSURE, 1); /* pos 2 */
 	wcmAxisSet(&axes, WACOM_AXIS_STRIP_X, 20); /* pos 3 */
@@ -1200,7 +1200,7 @@ TEST_CASE(test_convert_axes)
 	wcmAxisSet(&axes, WACOM_AXIS_RING, 3); /* pos 7 */
 	wcmAxisSet(&axes, WACOM_AXIS_WHEEL, 2); /* also pos 7 */
 
-	convertAxesM(&axes, mask);
+	convertAxes(&axes, mask);
 	assert(valuator_mask_num_valuators(mask) == 4);
 	assert(valuator_mask_size(mask) == 8);
 	assert(!valuator_mask_isset(mask, 0));

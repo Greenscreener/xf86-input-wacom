@@ -385,23 +385,23 @@ convertAxes(const WacomAxisData *axes, ValuatorMask *mask) {
 
 		/* Positions need to match wcmInitAxis */
 		switch (which){
-			case WACOM_AXIS_X: pos = 0; break;
-			case WACOM_AXIS_Y: pos = 1; break;
-			case WACOM_AXIS_PRESSURE: pos = 2; break;
-			case WACOM_AXIS_TILT_X: pos = 3; break;
-			case WACOM_AXIS_TILT_Y: pos = 4; break;
-			case WACOM_AXIS_STRIP_X: pos = 3; break;
-			case WACOM_AXIS_STRIP_Y: pos = 4; break;
-			case WACOM_AXIS_ROTATION: pos = 3; break;
-			case WACOM_AXIS_THROTTLE: pos = 4; break;
-			case WACOM_AXIS_SCROLL_X: pos = 5; break;
-			case WACOM_AXIS_SCROLL_Y: pos = 6; break;
-			case WACOM_AXIS_WHEEL: pos = 7; break;
-			case WACOM_AXIS_RING: pos = 7; break;
-			case WACOM_AXIS_RING2: pos = 8; break;
-					       break;
-			default:
-					       abort();
+		case WACOM_AXIS_X: pos = 0; break;
+		case WACOM_AXIS_Y: pos = 1; break;
+		case WACOM_AXIS_PRESSURE: pos = 2; break;
+		case WACOM_AXIS_TILT_X: pos = 3; break;
+		case WACOM_AXIS_TILT_Y: pos = 4; break;
+		case WACOM_AXIS_STRIP_X: pos = 3; break;
+		case WACOM_AXIS_STRIP_Y: pos = 4; break;
+		case WACOM_AXIS_ROTATION: pos = 3; break;
+		case WACOM_AXIS_THROTTLE: pos = 4; break;
+		case WACOM_AXIS_SCROLL_X: pos = 5; break;
+		case WACOM_AXIS_SCROLL_Y: pos = 6; break;
+		case WACOM_AXIS_WHEEL: pos = 7; break;
+		case WACOM_AXIS_RING: pos = 7; break;
+		case WACOM_AXIS_RING2: pos = 8; break;
+			break;
+		default:
+			abort();
 		}
 
 		valuator_mask_set(mask, pos, value);
@@ -412,17 +412,17 @@ void wcmEmitProximity(WacomDevicePtr priv, bool is_proximity_in,
 		      const WacomAxisData *axes)
 {
 	InputInfoPtr pInfo = priv->frontend;
-	
+
 	ValuatorMask *mask = valuator_mask_new(9);
 	convertAxes(axes, mask);
-	
+
 	xf86PostProximityEventM(pInfo->dev, is_proximity_in, mask);
 }
 
 void wcmEmitMotion(WacomDevicePtr priv, bool is_absolute, const WacomAxisData *axes)
 {
 	InputInfoPtr pInfo = priv->frontend;
-	
+
 	ValuatorMask *mask = valuator_mask_new(9);
 	convertAxes(axes, mask);
 

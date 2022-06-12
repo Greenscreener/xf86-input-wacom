@@ -266,26 +266,22 @@ def test_scroll(mainloop, opts):
     ]
 
     press_button2 = [
-        Sev("BTN_STYLUS2", 1),
+        Sev("BTN_STYLUS", 1),
         Sev("SYN_REPORT", 0),
     ]
 
     touchdown_pen = [
-        Sev("BTN_STYLUS", 1),
+        Sev("BTN_TOUCH", 1),
         Sev("SYN_REPORT", 0),
     ]
 
     move_pen_x = [Sev("ABS_X", 75), Sev("SYN_REPORT", 0)]
 
-    up_pen = [Sev("BTN_STYLUS", 0), Sev("SYN_REPORT", 0)]
+    up_pen = [Sev("BTN_TOUCH", 0), Sev("SYN_REPORT", 0)]
 
-    depress_button2 = [Sev("BTN_STYLUS2", 0), Sev("SYN_REPORT", 0)]
+    depress_button2 = [Sev("BTN_STYLUS", 0), Sev("SYN_REPORT", 0)]
 
     monitor = Monitor.new_from_device(dev, opts)
-
-    import IPython
-
-    IPython.embed()
 
     monitor.write_events(prox_in)
     monitor.write_events(press_button2)

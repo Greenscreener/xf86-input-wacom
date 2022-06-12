@@ -394,9 +394,11 @@ convertAxes(const WacomAxisData *axes, ValuatorMask *mask) {
 		case WACOM_AXIS_STRIP_Y: pos = 4; break;
 		case WACOM_AXIS_ROTATION: pos = 3; break;
 		case WACOM_AXIS_THROTTLE: pos = 4; break;
-		case WACOM_AXIS_WHEEL: pos = 5; break;
-		case WACOM_AXIS_RING: pos = 5; break;
-		case WACOM_AXIS_RING2: pos = 6; break;
+		case WACOM_AXIS_SCROLL_X: pos = 5; break;
+		case WACOM_AXIS_SCROLL_Y: pos = 6; break;
+		case WACOM_AXIS_WHEEL: pos = 7; break;
+		case WACOM_AXIS_RING: pos = 7; break;
+		case WACOM_AXIS_RING2: pos = 8; break;
 			break;
 		default:
 			abort();
@@ -512,22 +514,38 @@ void wcmInitAxis(WacomDevicePtr priv, enum WacomAxisType type,
 			index = 4;
 			label = XIGetKnownProperty(AXIS_LABEL_PROP_ABS_THROTTLE);
 			break;
+		case WACOM_AXIS_SCROLL_X:
+			index = 5;
+			label = XIGetKnownProperty(AXIS_LABEL_PROP_REL_HSCROLL);
+			break;
+		case WACOM_AXIS_SCROLL_Y:
+			index = 6;
+			label = XIGetKnownProperty(AXIS_LABEL_PROP_REL_VSCROLL);
+			break;
 		case WACOM_AXIS_WHEEL:
 		case WACOM_AXIS_RING:
-			index = 5;
+			index = 7;
 			label = XIGetKnownProperty(AXIS_LABEL_PROP_ABS_WHEEL);
 			break;
 		case WACOM_AXIS_RING2:
-			index = 6;
+			index = 8;
 			break;
+
 		default:
 			abort();
 	}
 
+
 	InitValuatorAxisStruct(pInfo->dev, index,
-	                       label,
-	                       min, max, res, min_res, max_res,
-	                       Absolute);
+			label,
+			min, max, res, min_res, max_res,
+			Absolute);
+
+	if (type == WACOM_AXIS_SCROLL_X)
+		SetScrollValuator(pInfo->dev, index, SCROLL_TYPE_HORIZONTAL, PANSCROLL_INCREMENT, 0);
+	else if (type == WACOM_AXIS_SCROLL_Y)
+		SetScrollValuator(pInfo->dev, index, SCROLL_TYPE_VERTICAL, PANSCROLL_INCREMENT, 0);
+
 }
 
 bool wcmInitButtons(WacomDevicePtr priv, unsigned int nbuttons)

@@ -82,7 +82,7 @@ WacomDevicePtr wcmAllocate(void *frontend, const char *name)
 	priv->strip_default[STRIP_LEFT_DN] = 5;
 	priv->strip_default[STRIP_RIGHT_UP] = 4;
 	priv->strip_default[STRIP_RIGHT_DN] = 5;
-	priv->naxes = 6;			/* Default number of axes */
+	priv->naxes = 8;			/* Default number of axes */
 
 	common->wcmDevices = priv;
 
@@ -974,7 +974,13 @@ static int wcmInitAxes(WacomDevicePtr priv)
 		wcmInitAxis(priv, WACOM_AXIS_STRIP_Y, min, max, res);
 	}
 
-	/* sixth valuator: airbrush: abs-wheel, artpen: rotation, pad:abs-wheel */
+	/* sixth valuator: scroll_x */
+	wcmInitAxis(priv, WACOM_AXIS_SCROLL_X, -1, -1, 0);
+
+	/* seventh valuator: scroll_y */
+	wcmInitAxis(priv, WACOM_AXIS_SCROLL_Y, -1, -1, 0);
+
+	/* eigth valuator: airbrush: abs-wheel, artpen: rotation, pad:abs-wheel */
 	res = 0;
 	if (IsStylus(priv))
 	{
@@ -990,7 +996,7 @@ static int wcmInitAxes(WacomDevicePtr priv)
 		wcmInitAxis(priv, WACOM_AXIS_RING, min, max, res);
 	}
 
-	/* seventh valuator: abswheel2 */
+	/* ninth valuator: abswheel2 */
 	if ((TabletHasFeature(common, WCM_DUALRING)) && IsPad(priv))
 	{
 		res = 0;
@@ -1011,9 +1017,9 @@ Bool wcmDevInit(WacomDevicePtr priv)
 	if (priv->common->wcmModel->DetectConfig)
 		priv->common->wcmModel->DetectConfig (priv);
 
-	nbaxes = priv->naxes;       /* X, Y, Pressure, Tilt-X, Tilt-Y, Wheel */
-	if (!nbaxes || nbaxes > 7)
-		nbaxes = priv->naxes = 7;
+	nbaxes = priv->naxes;       /* X, Y, Pressure, Tilt-X, Tilt-Y, Wheel, Scroll-X, Scroll-Y */
+	if (!nbaxes || nbaxes > 9)
+		nbaxes = priv->naxes = 9;
 	nbbuttons = priv->nbuttons; /* Use actual number of buttons, if possible */
 
 	if (IsPad(priv) && TabletHasFeature(priv->common, WCM_DUALRING))

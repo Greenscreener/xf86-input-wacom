@@ -116,17 +116,13 @@ static void wcmPanscroll(WacomDevicePtr priv, const WacomDeviceState *ds, int x,
 {
 	WacomCommonPtr common = priv->common;
 	int threshold = common->wcmPanscrollThreshold;
-	int *accumulated_x, *accumulated_y;
 	int delta_x, delta_y;
 
 	if (!(priv->flags & SCROLLMODE_FLAG) || !(ds->buttons & 1))
 		return;
 
-	/* Tip has gone down down; store state for dragging */
+	/* Tip has gone down down; don't send pan event yet */
 	if (!(priv->oldState.buttons & 1)) {
-		priv->wcmPanscrollState = *ds;
-		priv->wcmPanscrollState.x = 0;
-		priv->wcmPanscrollState.y = 0;
 		return;
 	}
 
@@ -138,16 +134,14 @@ static void wcmPanscroll(WacomDevicePtr priv, const WacomDeviceState *ds, int x,
 		delta_x = (x - priv->oldState.x);
 		delta_y = (y - priv->oldState.y);
 	}
+	
 
-	accumulated_x = &priv->wcmPanscrollState.x;
-	accumulated_y = &priv->wcmPanscrollState.y;
-	*accumulated_x += delta_x;
-	*accumulated_y += delta_y;
+	DBG(6, priv, "pan x = %d, pan y = %d\n", delta_x, delta_y);
 
-	DBG(6, priv, "pan x = %d, pan y = %d\n", *accumulated_x, *accumulated_y);
-
-	*accumulated_x = wcmButtonPerNotch(priv, *accumulated_x, threshold, 6, 7);
-	*accumulated_y = wcmButtonPerNotch(priv, *accumulated_y, threshold, 4, 5);
+	WacomAxisData axes = {0};
+	wcmAxisSet(&axes, WACOM_AXIS_SCROLL_X, -delta_x * PANSCROLL_INCREMENT/threshold);
+	wcmAxisSet(&axes, WACOM_AXIS_SCROLL_Y, -delta_y * PANSCROLL_INCREMENT/threshold);
+	wcmEmitMotion(priv, FALSE, &axes);
 }
 
 void wcmResetButtonAction(WacomDevicePtr priv, int button)

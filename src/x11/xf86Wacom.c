@@ -1100,8 +1100,9 @@ _valuator_mask_set_double(ValuatorMask *mask, int valuator, double data)
 void
 valuator_mask_set_double(ValuatorMask *mask, int valuator, double data)
 {
-	BUG_WARN_MSG(mask->has_unaccelerated,
-			"Do not mix valuator types, zero mask first\n");
+	if (mask->has_unaccelerated) {
+		wcmLog(null, 0, "Do not mix valuator types, zero mask first\n");
+	}
 	_valuator_mask_set_double(mask, valuator, data);
 }
 

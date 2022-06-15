@@ -95,23 +95,6 @@ Bool wcmDevSwitchModeCall(WacomDevicePtr priv, Bool absolute)
 	return TRUE;
 }
 
-
-static int wcmButtonPerNotch(WacomDevicePtr priv, int value, int threshold, int btn_positive, int btn_negative)
-{
-	int mode = is_absolute(priv);
-	int notches = value / threshold;
-	int button = (notches > 0) ? btn_positive : btn_negative;
-	int i;
-	WacomAxisData axes = {0};
-
-	for (i = 0; i < abs(notches); i++) {
-		wcmEmitButton(priv, mode, button, 1, &axes);
-		wcmEmitButton(priv, mode, button, 0, &axes);
-	}
-
-	return value % threshold;
-}
-
 static void wcmPanscroll(WacomDevicePtr priv, const WacomDeviceState *ds, int x, int y)
 {
 	WacomCommonPtr common = priv->common;

@@ -379,9 +379,10 @@ if build_unittests
 			modules: ['libevdev', 'pytest', 'yaml', 'attr', 'gi']
 		)
 
-		pytest = find_program('pytest', 'pytest-3')
+		pytest = find_program('pytest-3', 'pytest')
 		test('pytest',
 		     pytest,
+		     args: ['--verbose', '--log-level=DEBUG'],
 		     env: devenv,
 		     workdir: meson.current_source_dir(),
 		)

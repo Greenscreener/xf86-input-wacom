@@ -1012,8 +1012,6 @@ struct _ValuatorMask {
 	double unaccelerated[MAX_VALUATORS];    /* valuator data */
 };
 
-typedef struct _ValuatorMask ValuatorMask;
-
 // The following functions are copied from https://gitlab.freedesktop.org/xorg/xserver/-/blob/master/dix/inpututils.c
 
 int

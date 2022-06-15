@@ -1018,8 +1018,8 @@ Bool wcmDevInit(WacomDevicePtr priv)
 		priv->common->wcmModel->DetectConfig (priv);
 
 	nbaxes = priv->naxes;       /* X, Y, Pressure, Tilt-X, Tilt-Y, Wheel, Scroll-X, Scroll-Y */
-	if (!nbaxes || nbaxes > 9)
-		nbaxes = priv->naxes = 9;
+	if (!nbaxes || nbaxes > 8)
+		nbaxes = priv->naxes = 8;
 	nbbuttons = priv->nbuttons; /* Use actual number of buttons, if possible */
 
 	if (IsPad(priv) && TabletHasFeature(priv->common, WCM_DUALRING))

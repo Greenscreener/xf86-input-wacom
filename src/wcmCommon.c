@@ -117,7 +117,7 @@ static void wcmPanscroll(WacomDevicePtr priv, const WacomDeviceState *ds, int x,
 		delta_x = (x - priv->oldState.x);
 		delta_y = (y - priv->oldState.y);
 	}
-	
+
 
 	DBG(6, priv, "pan x = %d, pan y = %d\n", delta_x, delta_y);
 

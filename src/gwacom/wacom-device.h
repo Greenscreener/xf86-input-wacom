@@ -108,8 +108,10 @@ typedef enum {
 	WAXIS_WHEEL	= (1 << 9),
 	WAXIS_RING	= (1 << 10),
 	WAXIS_RING2	= (1 << 11),
+	WAXIS_SCROLL_X	= (1 << 12),
+	WAXIS_SCROLL_Y	= (1 << 13),
 
-	_WAXIS_LAST = WAXIS_RING2,
+	_WAXIS_LAST = WAXIS_SCROLL_Y,
 } WacomEventAxis;
 
 /* The pointer argument to all the event signals. If the mask is set for

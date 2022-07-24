@@ -394,9 +394,11 @@ convertAxes(const WacomAxisData *axes, ValuatorMask *mask) {
 		case WACOM_AXIS_STRIP_Y: pos = 4; break;
 		case WACOM_AXIS_ROTATION: pos = 3; break;
 		case WACOM_AXIS_THROTTLE: pos = 4; break;
-		case WACOM_AXIS_WHEEL: pos = 5; break;
-		case WACOM_AXIS_RING: pos = 5; break;
-		case WACOM_AXIS_RING2: pos = 6; break;
+		case WACOM_AXIS_SCROLL_X: pos = 5; break;
+		case WACOM_AXIS_SCROLL_Y: pos = 6; break;
+		case WACOM_AXIS_WHEEL: pos = 7; break;
+		case WACOM_AXIS_RING: pos = 7; break;
+		case WACOM_AXIS_RING2: pos = 8; break;
 			break;
 		default:
 			abort();
@@ -512,22 +514,38 @@ void wcmInitAxis(WacomDevicePtr priv, enum WacomAxisType type,
 			index = 4;
 			label = XIGetKnownProperty(AXIS_LABEL_PROP_ABS_THROTTLE);
 			break;
+		case WACOM_AXIS_SCROLL_X:
+			index = 5;
+			label = XIGetKnownProperty(AXIS_LABEL_PROP_REL_HSCROLL);
+			break;
+		case WACOM_AXIS_SCROLL_Y:
+			index = 6;
+			label = XIGetKnownProperty(AXIS_LABEL_PROP_REL_VSCROLL);
+			break;
 		case WACOM_AXIS_WHEEL:
 		case WACOM_AXIS_RING:
-			index = 5;
+			index = 7;
 			label = XIGetKnownProperty(AXIS_LABEL_PROP_ABS_WHEEL);
 			break;
 		case WACOM_AXIS_RING2:
-			index = 6;
+			index = 8;
 			break;
+
 		default:
 			abort();
 	}
 
+
 	InitValuatorAxisStruct(pInfo->dev, index,
-	                       label,
-	                       min, max, res, min_res, max_res,
-	                       Absolute);
+			label,
+			min, max, res, min_res, max_res,
+			Absolute);
+
+	if (type == WACOM_AXIS_SCROLL_X)
+		SetScrollValuator(pInfo->dev, index, SCROLL_TYPE_HORIZONTAL, PANSCROLL_INCREMENT, 0);
+	else if (type == WACOM_AXIS_SCROLL_Y)
+		SetScrollValuator(pInfo->dev, index, SCROLL_TYPE_VERTICAL, PANSCROLL_INCREMENT, 0);
+
 }
 
 bool wcmInitButtons(WacomDevicePtr priv, unsigned int nbuttons)
@@ -1120,7 +1138,7 @@ valuator_mask_get(const ValuatorMask *mask, int valuator)
 TEST_CASE(test_convert_axes)
 {
 	WacomAxisData axes = {0};
-	ValuatorMask *mask = valuator_mask_new(7);
+	ValuatorMask *mask = valuator_mask_new(9);
 
 	convertAxes(&axes, mask);
 	assert(valuator_mask_num_valuators(mask) == 0);
@@ -1152,20 +1170,22 @@ TEST_CASE(test_convert_axes)
 
 	/* Check conversion for gaps with first_valuator != 0 */
 	wcmAxisSet(&axes, WACOM_AXIS_PRESSURE, 1); /* pos 2 */
-	wcmAxisSet(&axes, WACOM_AXIS_WHEEL, 2); /* pos 5 */
+	wcmAxisSet(&axes, WACOM_AXIS_WHEEL, 2); /* pos 7 */
 
  	convertAxes(&axes, mask);
 	assert(valuator_mask_num_valuators(mask) == 2);
-	assert(valuator_mask_size(mask) == 6);
+	assert(valuator_mask_size(mask) == 8);
 	assert(!valuator_mask_isset(mask, 0));
 	assert(!valuator_mask_isset(mask, 1));
 	assert(valuator_mask_isset(mask, 2));
 	assert(valuator_mask_get(mask, 2) == 1);
 	assert(!valuator_mask_isset(mask, 3));
 	assert(!valuator_mask_isset(mask, 4));
-	assert(valuator_mask_isset(mask, 5));
-	assert(valuator_mask_get(mask, 5) == 2);
+	assert(!valuator_mask_isset(mask, 5));
 	assert(!valuator_mask_isset(mask, 6));
+	assert(valuator_mask_isset(mask, 7));
+	assert(valuator_mask_get(mask, 7) == 2);
+	assert(!valuator_mask_isset(mask, 8));
 
 	memset(&axes, 0, sizeof(axes));
 	valuator_mask_zero(mask);
@@ -1178,12 +1198,12 @@ TEST_CASE(test_convert_axes)
 	wcmAxisSet(&axes, WACOM_AXIS_STRIP_Y, 21); /* pos 4 */
 	wcmAxisSet(&axes, WACOM_AXIS_TILT_X, 10); /* also pos 3 */
 	wcmAxisSet(&axes, WACOM_AXIS_TILT_Y, 11); /* also pos 4 */
-	wcmAxisSet(&axes, WACOM_AXIS_RING, 3); /* pos 5 */
-	wcmAxisSet(&axes, WACOM_AXIS_WHEEL, 2); /* also pos 5 */
+	wcmAxisSet(&axes, WACOM_AXIS_RING, 3); /* pos 7 */
+	wcmAxisSet(&axes, WACOM_AXIS_WHEEL, 2); /* also pos 7 */
 
 	convertAxes(&axes, mask);
 	assert(valuator_mask_num_valuators(mask) == 4);
-	assert(valuator_mask_size(mask) == 6);
+	assert(valuator_mask_size(mask) == 8);
 	assert(!valuator_mask_isset(mask, 0));
 	assert(!valuator_mask_isset(mask, 1));
 	assert(valuator_mask_isset(mask, 2));
@@ -1192,10 +1212,12 @@ TEST_CASE(test_convert_axes)
 	assert(valuator_mask_get(mask, 3) == 10);
 	assert(valuator_mask_isset(mask, 4));
 	assert(valuator_mask_get(mask, 4) == 11);
-	assert(valuator_mask_isset(mask, 5));
-	assert(valuator_mask_get(mask, 5) == 2);
+	assert(!valuator_mask_isset(mask, 5));
 	assert(!valuator_mask_isset(mask, 6));
-	assert(!valuator_mask_isset(mask, 7));
+	assert(valuator_mask_isset(mask, 7));
+	assert(valuator_mask_get(mask, 7) == 2);
+	assert(!valuator_mask_isset(mask, 8));
+	assert(!valuator_mask_isset(mask, 9));
 
 	free(mask);
 }

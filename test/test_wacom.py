@@ -23,8 +23,6 @@ import logging
 import gi
 from gi.repository import GLib
 
-import time
-
 gi.require_version("wacom", "1.0")
 from gi.repository import wacom
 
@@ -243,56 +241,6 @@ def test_axis_updates(mainloop, opts, axis, stylus_type):
                 assert first[name] < current[name], f"for axis {name}"
             else:
                 assert first[name] == current[name], f"for axis {name}"
-
-
-def test_scroll(mainloop, opts):
-    """
-    Check panscrolling works correctly
-    """
-    dev = Device.from_name("PTH660", "Pen")
-    opts["Button"] = "2 pan"
-    opts["PanScrollThreshold"] = "150"
-
-    prox_in = [
-        Sev("ABS_X", 50),
-        Sev("ABS_Y", 50),
-        Sev("BTN_TOOL_PEN", 1),
-        Sev("SYN_REPORT", 0),
-    ]
-
-    prox_out = [
-        Sev("BTN_TOOL_PEN", 0),
-        Sev("SYN_REPORT", 0),
-    ]
-
-    press_button2 = [
-        Sev("BTN_STYLUS", 1),
-        Sev("SYN_REPORT", 0),
-    ]
-
-    touchdown_pen = [
-        Sev("BTN_TOUCH", 1),
-        Sev("SYN_REPORT", 0),
-    ]
-
-    move_pen_x = [Sev("ABS_X", 75), Sev("SYN_REPORT", 0)]
-
-    up_pen = [Sev("BTN_TOUCH", 0), Sev("SYN_REPORT", 0)]
-
-    depress_button2 = [Sev("BTN_STYLUS", 0), Sev("SYN_REPORT", 0)]
-
-    monitor = Monitor.new_from_device(dev, opts)
-
-    monitor.write_events(prox_in)
-    monitor.write_events(press_button2)
-    monitor.write_events(touchdown_pen)  # Pen touchdown
-    monitor.write_events(move_pen_x)  # Move pen 25% towards positive x
-    monitor.write_events(up_pen)  # Pen up
-    monitor.write_events(depress_button2)  # Depress button2
-    monitor.write_events(prox_out)
-
-    mainloop.run()
-    logger.debug(f"We have some events: {monitor.events}")
 
 
 @pytest.mark.parametrize(

@@ -412,7 +412,7 @@ void wcmEmitProximity(WacomDevicePtr priv, bool is_proximity_in,
 		      const WacomAxisData *axes)
 {
 	InputInfoPtr pInfo = priv->frontend;
-	
+
 	ValuatorMask *mask = priv->valuator_mask;
 	valuator_mask_zero(mask);
 	convertAxes(axes, mask);
@@ -1219,6 +1219,7 @@ TEST_CASE(test_convert_axes)
 	assert(!valuator_mask_isset(mask, 8));
 	assert(!valuator_mask_isset(mask, 9));
 
+	free(mask);
 }
 
 #endif

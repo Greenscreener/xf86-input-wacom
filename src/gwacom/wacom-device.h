@@ -126,6 +126,7 @@ typedef struct {
 	int throttle;
 	int wheel;
 	int ring, ring2;
+	int scroll_x, scroll_y;
 } WacomEventData;
 
 #define WACOM_TYPE_EVENT_DATA (wacom_event_data_get_type())

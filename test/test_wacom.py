@@ -375,7 +375,10 @@ def test_scroll(mainloop, opts):
     monitor.write_events(prox_out)
 
     mainloop.run()
-    logger.debug(f"We have some events: {monitor.events}")
+    have_we_scrolled = False
+    for event in monitor.events:
+        if event.axes.scroll_x != 0:
+            assert event.axes.scroll_x == -1223320
+            have_we_scrolled = True
+    assert have_we_scrolled
 
-
-# vim: set expandtab tabstop=4 shiftwidth=4:
